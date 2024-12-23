@@ -37,8 +37,7 @@ python app.py
 Acesse o sistema no navegador em http://127.0.0.1:5000.
 
 ## Estrutura do Projeto
-plaintext
-Copiar código
+```plaintext
 📁 sistema-gerenciamento-financeiro
 ├── 📂 templates       # Arquivos HTML para renderização das páginas
 ├── 📂 static          # Arquivos estáticos como CSS e JavaScript
@@ -47,6 +46,7 @@ Copiar código
 ├── requirements.txt   # Dependências do projeto
 └── LICENSE            # Termos de licença proprietária
 
+````
 ## Licença
 Este projeto está protegido sob uma Licença Proprietária.
 Todos os direitos reservados.
