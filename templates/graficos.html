@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gráficos</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Gráficos Financeiros</h1>
+
+        <canvas id="grafico-gastos" class="mb-4"></canvas>
+
+        <form action="/exportar_relatorio" method="post" class="mb-4">
+            <div class="row">
+                <div class="col-md-5">
+                    <label for="data_inicio" class="form-label">Data Início</label>
+                    <input type="date" id="data_inicio" name="data_inicio" class="form-control" required>
+                </div>
+                <div class="col-md-5">
+                    <label for="data_fim" class="form-label">Data Fim</label>
+                    <input type="date" id="data_fim" name="data_fim" class="form-control" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Exportar Relatório</button>
+                </div>
+            </div>
+        </form>
+
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Voltar ao Dashboard</a>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+
+
+</body>
+</html>
+
+<!--
+# Este código é propriedade de Arnaldo Rocha Filho
+# Direitos Reservados © 2024
+ --> 

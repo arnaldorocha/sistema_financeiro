@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Transação</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script>
+        function toggleCategoria() {
+            const tipo = document.getElementById('tipo').value;
+            const categoriaField = document.getElementById('categoriaField');
+            if (tipo === 'gasto') {
+                categoriaField.style.display = 'block';
+            } else {
+                categoriaField.style.display = 'none';
+            }
+        }
+
+        window.onload = function() {
+            toggleCategoria(); // Executa a função ao carregar a página para verificar se deve exibir o campo de categoria
+        };
+    </script>
+</head>
+<body class="bg-light">
+
+    <div class="container py-5">
+        <h1 class="text-center text-primary mb-4">Editar Transação</h1>
+
+        <!-- Botão "Voltar" -->
+        <a href="javascript:history.back()" class="btn-voltar mb-3"> ⬅ </a>
+        
+        <!-- Formulário de Edição -->
+        <form method="POST" class="p-4 border rounded shadow-sm bg-white">
+            <div class="mb-3">
+                <label for="tipo" class="form-label">Tipo:</label>
+                <select id="tipo" name="tipo" class="form-select" onchange="toggleCategoria()" required>
+                    <option value="renda" {% if transacao.tipo == 'renda' %}selected{% endif %}>Renda</option>
+                    <option value="gasto" {% if transacao.tipo == 'gasto' %}selected{% endif %}>Gasto</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="nome" class="form-label">Nome:</label>
+                <input type="text" id="nome" name="nome" class="form-control" value="{{ transacao.nome }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="valor" class="form-label">Valor (R$):</label>
+                <input type="number" id="valor" name="valor" class="form-control" value="{{ transacao.valor }}" required>
+            </div>
+
+            
+            <div class="mb-3">
+                <label for="data" class="form-label">Data</label>
+                <input type="date" class="form-control" id="data" name="data" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="periodo" class="form-label">Período:</label>
+                <select id="periodo" name="periodo" class="form-select" required>
+                    <option value="mensal" {% if transacao.periodo == 'anual' %}selected{% endif %}>Anual</option>
+                    <option value="mensal" {% if transacao.periodo == 'mensal' %}selected{% endif %}>Mensal</option>
+                    <option value="semanal" {% if transacao.periodo == 'semanal' %}selected{% endif %}>Semanal</option>
+                    <option value="diario" {% if transacao.periodo == 'diario' %}selected{% endif %}>Diário</option>
+                </select>
+            </div>
+
+            <!-- Campo de Categoria (apenas visível se o tipo for 'gasto') -->
+            <div id="categoriaField" class="mb-3" style="display: {% if transacao.tipo == 'gasto' %}block{% else %}none{% endif %};">
+                <label for="categoria" class="form-label">Categoria:</label>
+                <select id="categoria" name="categoria" class="form-select">
+                    <option value="necessidades" {% if transacao.categoria == 'necessidades' %}selected{% endif %}>Necessidades</option>
+                    <option value="lazer" {% if transacao.categoria == 'lazer' %}selected{% endif %}>Lazer</option>
+                    <option value="poupanca" {% if transacao.categoria == 'poupanca' %}selected{% endif %}>Poupança</option>
+                    <option value="causas_sociais" {% if transacao.categoria == 'causas_sociais' %}selected{% endif %}>Causas Sociais</option>
+                </select>
+            </div>
+
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+
+</body>
+</html>
+
+<!--
+# Este código é propriedade de Arnaldo Rocha Filho
+# Direitos Reservados © 2024
+ --> 

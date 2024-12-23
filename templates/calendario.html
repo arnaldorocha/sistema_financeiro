@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendário de Notificações</title>
+    <!-- Incluindo os arquivos CSS e JS do FullCalendar -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #calendar {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Calendário de Notificações</h1>
+    <a href="{{ url_for('dashboard') }}">Voltar ao Dashboard</a>
+
+    <!-- Calendário -->
+    <div id="calendar"></div>
+
+    <!-- Script para inicializar o FullCalendar -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',  // Modo de visualização inicial (mês)
+                events: {{ eventos | tojson }},  // Envia os eventos do backend para o FullCalendar
+                eventClick: function(info) {
+                    alert('Título: ' + info.event.title + '\nDescrição: ' + info.event.extendedProps.description);
+                }
+            });
+            calendar.render();
+        });
+    </script>
+</body>
+</html>
+
+<!--
+# Este código é propriedade de Arnaldo Rocha Filho
+# Direitos Reservados © 2024
+ --> 

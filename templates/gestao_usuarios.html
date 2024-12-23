@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Gestão de Usuários </title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/gestao_usuarios.css') }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+</head>
+<body>
+    <div class="barraNavegacao">
+        <div class="conteiner_logo">
+            <img src="{{ url_for('static', filename='images/logo_nik0.png') }}" id="logo_projeto">
+        </div>
+        <div class="conteiner_botao">
+            <a href="{{ url_for('dashboard') }}" id="link_gestao_usuarios">DASHBOARD</a>
+            
+            <a id="barra">|</a>
+
+            <form method="post" action="{{ url_for('logout') }}" id="form_logout">
+                <input type="submit" value="SAIR">
+            </form>
+        </div>
+    </div>
+    <div class="tabelaUsuarios">
+        <h1>Gerenciamento de Usuários</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                    <tr>
+                        <td>{{ user[0] }}</td>
+                        <td>{{ user[1] }}</td>
+                        <td>
+                            <form class="excluir-form" action="{{ url_for('excluir_usuario', user_id=user[0]) }}" method="post" data-id="{{ user[0] }}">
+                                <input type="hidden" name="_method" value="DELETE">
+                                <button type="submit">Excluir</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+
+<!--
+# Este código é propriedade de Arnaldo Rocha Filho
+# Direitos Reservados © 2024
+ --> 

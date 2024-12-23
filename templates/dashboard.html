@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Financeiro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-light">
+
+    <!-- Barra de Navegação -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <i class="fa-solid fa-piggy-bank me-2"></i> Controle Financeiro
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Alternar navegação">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link text-white" href="/gestao_usuarios"><i class="fa-solid fa-user"></i> Gestão Usuários</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('notificacoes') }}"><i class="fa-solid fa-bell"></i> Ver Notificações</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('calendario') }}"><i class="fa-solid fa-chart-pie"></i> Gráficos</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+    <!-- Conteúdo Principal -->
+    <div class="container py-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="text-primary">Dashboard Financeiro</h1>
+            <a href="/" class="btn btn-outline-primary">
+                <i class="fa-solid fa-house"></i> Home
+            </a>
+        </div>
+
+        <!-- Alerta -->
+        {% if alerta_saldo %}
+        <div class="alert alert-warning text-center">
+            <i class="fa-solid fa-exclamation-triangle me-2"></i>{{ alerta_saldo }}
+        </div>
+        {% endif %}
+
+        <!-- Grid -->
+        <div class="row">
+            <!-- Coluna: Transações -->
+            <div class="col-md-8 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="h5 mb-0">Transações</h2>
+                    </div>
+                    <div class="card-body">
+                        {% if transacoes %}
+                        <ul class="list-group">
+                            {% for transacao in transacoes %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="fa-solid fa-coins text-success me-2"></i>
+                                    {{ transacao.nome|title }} - R$ {{ transacao.valor }} 
+                                    ({{ transacao.categoria|title }}  )
+                                </span>
+                                <div>
+                                    <a href="/editar_transacao/{{ transacao.id }}" class="btn btn-warning btn-sm">
+                                        <i class="fa-solid fa-edit"></i>
+                                    </a>
+                                    <a href="/excluir_transacao/{{ transacao.id }}" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja excluir esta transação?')">
+                                        <i class="fa-solid fa-trash-alt"></i>
+                                    </a>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted text-center">Nenhuma transação encontrada.</p>
+                        {% endif %}
+                        <div class="text-center mt-3">
+                            <a href="/adicionar_transacao" class="btn btn-success">
+                                <i class="fa-solid fa-plus"></i> Adicionar Transação
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna: Relatórios -->
+            <div class="col-md-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="h5 mb-0">Relatório de Metas</h2>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Categoria</th>
+                                    <th>Meta (R$)</th>
+                                    <th>Gasto (R$)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for categoria, dados in comparacao.items() %}
+                                <tr>
+                                    <td>{{ categoria.capitalize() }}</td>
+                                    <td>R$ {{ dados.meta }}</td>
+                                    <td>R$ {{ dados.gasto }}</td>
+                                    <td>
+                                        {% if dados.status == 'dentro' %}
+                                        <span class="badge bg-success">Dentro da meta</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Meta Excedida</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <div class="text-center mt-3">
+                            <a href="/editar_metas" class="btn btn-primary">
+                                <i class="fa-solid fa-pencil-alt"></i> Editar Metas
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="h5 mb-0">Resumo Financeiro</h2>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group">
+                            <li class="list-group-item">
+                                <i class="fa-solid fa-dollar-sign text-success me-2"></i> Total Rendas: R$ {{ total_rendas }}
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fa-solid fa-wallet text-danger me-2"></i> Total Gastos: R$ {{ total_gastos }}
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fa-solid fa-balance-scale text-info me-2"></i> Saldo: R$ {{ saldo }}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+    </div>
+
+    <!-- Rodapé -->
+    <footer class="bg-primary text-white text-center py-3 mt-4">
+        <p class="mb-0">
+            &copy; 2024 Controle Financeiro. Todos os direitos reservados.
+        </p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.5/index.global.min.js"></script>
+
+</body>
+</html>
+
+<!--
+# Este código é propriedade de Arnaldo Rocha Filho
+# Direitos Reservados © 2024
+ --> 
