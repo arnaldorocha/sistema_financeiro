@@ -21,9 +21,6 @@ body {
     transition: transform 0.3s ease-in-out;
 }
 
-.hero:hover {
-    transform: scale(1.05); /* Efeito suave de zoom no hover */
-}
 
 .hero h1 {
     font-size: 3rem;
