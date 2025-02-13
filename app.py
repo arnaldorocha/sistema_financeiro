@@ -32,7 +32,7 @@ def inicializar_bd():
     if conn is None:
         return
     cursor = conn.cursor()
-    # Adiciona as colunas necessárias (se já não existirem)
+    # Adiciona as colunas necessárias, se ainda não existirem
     try:
         cursor.execute("ALTER TABLE Transacoes ADD COLUMN categoria TEXT")
     except sqlite3.OperationalError:
@@ -46,7 +46,7 @@ def inicializar_bd():
     except sqlite3.OperationalError:
         pass
 
-    # Cria as tabelas se não existirem
+    # Criação das tabelas
     cursor.execute('''CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
@@ -81,16 +81,18 @@ def inicializar_bd():
         lida INTEGER DEFAULT 0
     )''')
 
+    # A tabela Avisos registra contas a pagar ou a receber
     cursor.execute('''CREATE TABLE IF NOT EXISTS Avisos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         usuario_id INTEGER NOT NULL,
-        tipo TEXT NOT NULL,
+        tipo TEXT NOT NULL, -- 'pagar' ou 'receber'
         nome TEXT NOT NULL,
         valor REAL NOT NULL,
         data DATE NOT NULL,
         status TEXT DEFAULT 'pendente'
     );''')
 
+    # Insere valores padrão na tabela Configuracoes, se não houver registros
     cursor.execute('''INSERT INTO Configuracoes (investimento, reserva, causas_sociais, lazer, necessidades)
                       SELECT 10, 10, 10, 20, 50 WHERE NOT EXISTS (SELECT 1 FROM Configuracoes)''')
     conn.commit()
@@ -169,22 +171,22 @@ def notificar_transacoes():
     conn.commit()
     conn.close()
 
-@scheduler.task('interval', id='notificar_transacoes_antecipadas', minutes=60)
-def notificar_transacoes_antecipadas():
+# Nova tarefa para avisar sobre avisos (contas) com 10 dias de antecedência
+@scheduler.task('interval', id='notificar_avisos', minutes=1440)  # Executa uma vez por dia
+def notificar_avisos():
     conn = conectar_bd()
     if conn is None:
         return
     cursor = conn.cursor()
-    tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
-    cursor.execute("SELECT * FROM Transacoes WHERE data = ? AND notificado_antecipado = 0", (tomorrow,))
-    transacoes = cursor.fetchall()
-    for transacao in transacoes:
-        tipo = transacao['tipo'].strip().lower()
-        nome = transacao['nome'].strip().lower()
-        if (tipo == 'gasto' and 'investimento' in nome) or (tipo == 'renda'):
-            mensagem = f"Amanhã: {transacao['tipo'].capitalize()} '{transacao['nome']}' de R$ {transacao['valor']}."
-            cursor.execute("INSERT INTO Notificacoes (mensagem) VALUES (?)", (mensagem,))
-            cursor.execute("UPDATE Transacoes SET notificado_antecipado = 1 WHERE id = ?", (transacao['id'],))
+    # Data para aviso: 10 dias à frente
+    data_aviso = (datetime.now() + timedelta(days=10)).strftime('%Y-%m-%d')
+    # Seleciona avisos que ainda estão pendentes e cuja data é igual à data_aviso ou anteriores (atrasadas)
+    cursor.execute("SELECT * FROM Avisos WHERE data <= ? AND status = 'pendente'", (data_aviso,))
+    avisos = cursor.fetchall()
+    for aviso in avisos:
+        mensagem = f"Alerta: {aviso['tipo'].capitalize()} '{aviso['nome']}' de R$ {aviso['valor']} vence em breve ou está atrasado."
+        # Registra notificação (pode ser ajustado para evitar duplicatas)
+        cursor.execute("INSERT INTO Notificacoes (mensagem) VALUES (?)", (mensagem,))
     conn.commit()
     conn.close()
 
@@ -239,23 +241,6 @@ def marcar_como_lida(notificacao_id):
     flash("Notificação marcada como lida.", "success")
     return redirect(url_for('notificacoes'))
 
-@app.route('/calendario', methods=['GET'])
-def calendario():
-    if 'user_id' not in session:
-        flash("Usuário não autenticado!", "danger")
-        return redirect(url_for('login'))
-    usuario_id = session['user_id']
-    conn = conectar_bd()
-    if conn is None:
-        flash("Erro ao conectar ao banco de dados", "danger")
-        return redirect(url_for('dashboard'))
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Avisos WHERE usuario_id = ? AND data >= ? ORDER BY data", 
-                   (usuario_id, datetime.now().strftime('%Y-%m-%d')))
-    avisos = cursor.fetchall()
-    conn.close()
-    return render_template('calendario.html', eventos=avisos)
-
 @app.route('/gestao_usuarios')
 def gestao_usuarios():
     try:
@@ -298,7 +283,7 @@ def dashboard():
         flash("Você não está autenticado.", "error")
         return redirect(url_for('index'))
     try:
-        # Intervalo do mês atual
+        # Define o intervalo do mês atual
         data_inicio = datetime.now().replace(day=1).strftime('%Y-%m-%d')
         data_fim = (datetime.now().replace(day=28) + timedelta(days=4)).replace(day=1).strftime('%Y-%m-%d')
         
@@ -307,7 +292,7 @@ def dashboard():
             flash("Erro ao conectar ao banco de dados", "danger")
             return redirect(url_for('index'))
         cursor = conn.cursor()
-        # Filtra transações do mês atual e com período 'mensal'
+        # Filtra transações do mês atual com período 'mensal'
         cursor.execute("SELECT * FROM Transacoes WHERE periodo = 'mensal' AND data BETWEEN ? AND ? ORDER BY data DESC", (data_inicio, data_fim))
         transacoes = cursor.fetchall()
         cursor.execute("SELECT * FROM Configuracoes LIMIT 1")
@@ -368,7 +353,8 @@ def dashboard():
         return redirect(url_for('index'))
 
 # =====================================================
-# Rota para Visualizar/Editar/Inserir Transações com Filtro
+# Rotas de Transações
+# (Inclui filtragem por período e pesquisa)
 # =====================================================
 
 @app.route('/transacoes', methods=['GET'])
@@ -376,8 +362,7 @@ def transacoes_view():
     if 'user_id' not in session:
         flash("Você não está autenticado.", "error")
         return redirect(url_for('index'))
-    # Filtra por período e pesquisa (query string)
-    periodo = request.args.get('periodo')  # valores esperados: 'diario', 'semanal', 'mensal', 'anual'
+    periodo = request.args.get('periodo')  # 'diario', 'semanal', 'mensal', 'anual'
     pesquisa = request.args.get('pesquisa', '').lower()
     conn = conectar_bd()
     if conn is None:
@@ -390,7 +375,6 @@ def transacoes_view():
         cursor.execute("SELECT * FROM Transacoes ORDER BY data DESC")
     transacoes = cursor.fetchall()
     conn.close()
-    # Se houver termo de pesquisa, filtra os registros localmente
     if pesquisa:
         transacoes = [t for t in transacoes if pesquisa in t['nome'].lower()]
     return render_template('transacoes.html', transacoes=transacoes, periodo=periodo, pesquisa=pesquisa)
@@ -407,7 +391,6 @@ def adicionar_transacao():
         valor = float(request.form['valor'])
         periodo = request.form['periodo']
         data = request.form['data']
-        # Se for investimento, trata-o como gasto inicialmente
         if tipo == 'investimento':
             tipo = 'gasto'
         categoria = request.form['categoria'] if tipo == 'gasto' else 'necessidades'
@@ -469,7 +452,36 @@ def excluir_transacao(id):
     return redirect(url_for('transacoes_view'))
 
 # =====================================================
-# Rota para Editar Metas
+# Rotas para Avisos (Contas a Pagar / Receber)
+# =====================================================
+
+# Rota para inserir um aviso (conta futura/mensal)
+@app.route('/inserir_aviso', methods=['GET', 'POST'])
+def inserir_aviso():
+    if 'user_id' not in session:
+        flash("Você não está autenticado.", "error")
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        usuario_id = session['user_id']
+        tipo = request.form['tipo'].strip().lower()  # 'pagar' ou 'receber'
+        nome = request.form['nome']
+        valor = float(request.form['valor'])
+        data = request.form['data']
+        conn = conectar_bd()
+        if conn is None:
+            flash("Erro ao conectar ao banco de dados", "danger")
+            return redirect(url_for('index'))
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO Avisos (usuario_id, tipo, nome, valor, data) VALUES (?, ?, ?, ?, ?)",
+                       (usuario_id, tipo, nome, valor, data))
+        conn.commit()
+        conn.close()
+        flash("Aviso inserido com sucesso!", "success")
+        return redirect(url_for('contas'))
+    return render_template('inserir_aviso.html')
+
+# =====================================================
+# Rotas para Editar Metas
 # =====================================================
 
 @app.route('/editar_metas', methods=['GET', 'POST'])
@@ -497,7 +509,7 @@ def editar_metas():
     return render_template('editar_metas.html', configuracoes=configuracoes)
 
 # =====================================================
-# Rotas para Contas e Conselhos Financeiros
+# Rotas para Contas (Exibição de Contas a Pagar/Receber)
 # =====================================================
 
 @app.route('/contas')
@@ -505,27 +517,80 @@ def contas():
     if 'user_id' not in session:
         flash("Você não está autenticado.", "error")
         return redirect(url_for('index'))
+    # Filtra por período, se informado
+    periodo = request.args.get('periodo')
+    pesquisa = request.args.get('pesquisa', '').lower()
     conn = conectar_bd()
     if conn is None:
         flash("Erro ao conectar ao banco de dados", "danger")
         return redirect(url_for('dashboard'))
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Avisos ORDER BY data ASC")
+    if periodo:
+        cursor.execute("SELECT * FROM Avisos WHERE data LIKE ? ORDER BY data ASC", (f'%{periodo}%',))
+    else:
+        cursor.execute("SELECT * FROM Avisos ORDER BY data ASC")
     avisos = cursor.fetchall()
     conn.close()
-    return render_template('contas.html', avisos=avisos)
+    # Filtra localmente por termo de pesquisa
+    if pesquisa:
+        avisos = [a for a in avisos if pesquisa in a['nome'].lower() or pesquisa in a['tipo'].lower()]
+    return render_template('contas.html', avisos=avisos, periodo=periodo, pesquisa=pesquisa)
 
-@app.route('/conselhos')
-def conselhos():
-    orientacoes = {
-        "investimento": "Investimento ou poupança: garanta uma fonte extra de renda. Não gaste além da meta.",
-        "reserva": "Uma reserva de emergência é crucial para enfrentar imprevistos. Não utilize para despesas correntes.",
-        "causas_sociais": "Doações são uma ótima forma de ajudar. Destine esse valor com consciência.",
-        "lazer": "Lazer é importante, mas não ultrapasse sua meta para não comprometer outras áreas.",
-        "necessidades": "Gastos essenciais devem ser otimizados: busque eficiência e evite excessos."
-    }
-    return render_template('conselhos.html', orientacoes=orientacoes)
+# =====================================================
+# Rotas para Calendário (Exibição de Eventos)
+# =====================================================
+@app.route('/calendario', methods=['GET'])
+def calendario():
+    if 'user_id' not in session:
+        flash("Usuário não autenticado!", "danger")
+        return redirect(url_for('login'))
+    
+    # Permite filtrar por período e pesquisa para o calendário
+    periodo = request.args.get('periodo')
+    pesquisa = request.args.get('pesquisa', '').lower()
+    
+    conn = conectar_bd()
+    if conn is None:
+        flash("Erro ao conectar ao banco de dados", "danger")
+        return redirect(url_for('dashboard'))
+    
+    cursor = conn.cursor()
+    eventos = []
+    
+    # Eventos dos Avisos
+    if periodo:
+        cursor.execute("SELECT * FROM Avisos WHERE data LIKE ? ORDER BY data", (f'%{periodo}%',))
+    else:
+        cursor.execute("SELECT * FROM Avisos ORDER BY data")
+    
+    avisos = cursor.fetchall()
+    
+    # Eventos das Transações
+    cursor.execute("SELECT * FROM Transacoes ORDER BY data")
+    transacoes = cursor.fetchall()
+    conn.close()
 
+    # Processar avisos
+    for a in avisos:
+        eventos.append({
+            'title': f"{a['tipo'].capitalize()}: {a['nome']} (R$ {a['valor']})",
+            'start': a['data'],
+            'extendedProps': {'description': f"Status: {a['status']}"}
+        })
+
+    # Processar transações
+    for t in transacoes:
+        eventos.append({
+            'title': f"{t['tipo'].capitalize()}: {t['nome']} (R$ {t['valor']})",
+            'start': t['data'],
+            'extendedProps': {'description': f"Período: {t['periodo']} - Categoria: {t['categoria']}"}
+        })
+
+    # Filtrar por pesquisa
+    if pesquisa:
+        eventos = [ev for ev in eventos if pesquisa in ev['title'].lower()]
+
+    return render_template('calendario.html', eventos=eventos, periodo=periodo, pesquisa=pesquisa)
 # =====================================================
 # Execução do Aplicativo
 # =====================================================

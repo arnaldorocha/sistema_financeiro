@@ -6,7 +6,7 @@
   <title>Calendário de Notificações</title>
   <!-- FullCalendar CSS -->
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
-  <!-- Bootstrap CSS (opcional para layout) -->
+  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
@@ -21,7 +21,7 @@
     
     <!-- Controles de Filtro -->
     <div class="filter-controls mb-3">
-      <div class="row">
+      <div class="row g-2">
         <div class="col-md-4">
           <input type="text" id="searchEvent" class="form-control" placeholder="Pesquisar por nome...">
         </div>
@@ -39,54 +39,75 @@
     
     <!-- Calendário -->
     <div id="calendar"></div>
+    
+    <!-- Área para Relatório e Gráficos (opcional, similar ao Dashboard) -->
+    <div class="mt-4">
+      <h2 class="text-center">Relatório e Gráficos</h2>
+      <canvas id="calendarioChart"></canvas>
+    </div>
   </div>
 
   <!-- FullCalendar JS -->
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Chart.js (para relatório) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      var calendarEl = document.getElementById('calendar');
-      var calendar = new FullCalendar.Calendar(calendarEl, {
+      const calendarEl = document.getElementById('calendar');
+      const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
-        events: {{ eventos | tojson }},  // Os eventos devem ser enviados pelo backend
-        eventDidMount: function(info) {
-          // Exemplo: destaque para eventos que estejam a 10 dias de antecedência (futuro)
-          const eventDate = new Date(info.event.start);
-          const today = new Date();
-          const diffDays = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
-          if(diffDays <= 10 && diffDays >= 0) {
-            info.el.style.border = '2px solid red';
-          }
-        },
+        events: {{ eventos | tojson }},  // Eventos enviados pelo backend
         eventClick: function(info) {
           alert('Título: ' + info.event.title + '\nDescrição: ' + info.event.extendedProps.description);
         }
       });
       calendar.render();
       
-      // Filtro por período
+      // Filtro por período: recarrega a página com o parâmetro na query string
       document.querySelectorAll('.filter-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
           const period = this.getAttribute('data-period');
-          // Aqui você pode recarregar a página com o parâmetro de período, ou usar a API do FullCalendar para filtrar eventos
-          // Exemplo simples: recarregar com query string:
           window.location.href = '{{ url_for("calendario") }}' + (period ? '?periodo=' + period : '');
         });
       });
       
-      // Filtro por nome (busca simples, filtrando eventos visíveis)
+      // Filtro por nome: ajusta a exibição dos eventos
       document.getElementById('searchEvent').addEventListener('keyup', function() {
         const searchTerm = this.value.toLowerCase();
         calendar.getEvents().forEach(function(event) {
-          // Se o título do evento não contiver o termo, remova-o do calendário
-          if(!event.title.toLowerCase().includes(searchTerm)) {
+          if (!event.title.toLowerCase().includes(searchTerm)) {
             event.setProp('display', 'none');
           } else {
             event.setProp('display', 'auto');
           }
         });
+      });
+      
+      // Exemplo de gráfico de relatório usando Chart.js (dados enviados pelo backend)
+      const ctx = document.getElementById('calendarioChart').getContext('2d');
+      const reportChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: {{ relatorio_datas | tojson }}, // Datas ou períodos (enviadas pelo backend)
+          datasets: [{
+            label: 'Total de Gastos',
+            data: {{ relatorio_gastos | tojson }},  // Valores enviados pelo backend
+            borderColor: '#e74a3b',
+            fill: false,
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: value => `R$ ${value}` }
+            }
+          }
+        }
       });
     });
   </script>
