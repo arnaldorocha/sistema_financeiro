@@ -19,16 +19,17 @@
   <!-- Orientações de como usar o dinheiro -->
     <div class="alert alert-info">
       <h3>Como usar seu dinheiro:</h3>
-      <p><strong>Modelo 50/30/20:</strong> 50% para necessidades, 30% para desejos e 20% para poupança.</p>
-      <p><strong>Modelo 50/20/20/10:</strong> 50% para necessidades, 20% para desejos, 20% para poupança e 10% para dízimo ou causas sociais.</p>
+      <p><strong>Modelo 30/20/20/20/10:</strong> 30% para necessidades, 30% para desejos, 20% para reserva, 20% para investimento e 10% para dízimo ou causas sociais.
+      <p><strong>Modelo 30/30/20/10:</strong> 30% para necessidades, 30% para desejos, 20% para investimento e 10% para reserva.</p>
+      <p><strong>Modelo 50/30/20/</strong> 50% para necessidades, 30% para desejos, 20% reserva </p>
       <p><strong>Orientações de Investimento:</strong> Sempre priorize a reserva de emergência antes de investir em ativos mais arriscados. Considere investir em fundos de baixo custo, como os ETFs, ou em ações de empresas sólidas, além de buscar opções de renda fixa para segurança.</p>
     </div>
 
 
 <form action="/editar_metas" method="POST">
     <div class="mb-3">
-        <label for="poupanca" class="form-label">Poupança (mínimo 10%):</label>
-        <input type="number" class="form-control" id="poupanca" name="poupanca" step="0.01" value="{{ configuracoes['poupanca'] }}" required>
+        <label for="investimento" class="form-label">Investimento (mínimo 10%):</label>
+        <input type="number" class="form-control" id="investimento" name="investimento" step="0.01" value="{{ configuracoes['poupanca'] }}" required>
     </div>
     <div class="mb-3">
         <label for="reserva" class="form-label">Reserva (mínimo 10%):</label>

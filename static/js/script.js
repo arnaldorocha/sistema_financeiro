@@ -64,7 +64,7 @@ function carregarRelatorio() {
             const metas = data.metas;
             const metasElement = document.getElementById('metas');
             metasElement.innerHTML = `
-                <li>Poupança: R$ ${metas.poupanca.toFixed(2)}</li>
+                <li>Poupança: R$ ${metas.investimento.toFixed(2)}</li>
                 <li>Reserva: R$ ${metas.reserva.toFixed(2)}</li>
                 <li>Causas Sociais: R$ ${metas.causas_sociais.toFixed(2)}</li>
                 <li>Lazer: R$ ${metas.lazer.toFixed(2)}</li>

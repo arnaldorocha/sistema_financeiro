@@ -3,11 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Financeiro</title>
+  <title>Dashboard Financeiro - Relatório Mensal</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Plugin de Annotation (necessário para a linha de meta, se desejar) -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.1.0"></script>
+  <style>
+    /* Controles do Gráfico */
+    .chart-controls {
+      margin: 1rem 0;
+      text-align: center;
+    }
+    .chart-btn {
+      margin: 0 5px;
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+    .chart-btn.active {
+      border-color: #4e73df;
+      transform: scale(1.1);
+    }
+    /* Ajustes no Canvas */
+    #metasGastosChart {
+      max-height: 400px;
+      width: 100%!important;
+    }
+    /* Estilo para o aviso de meta ultrapassada */
+    #avisoMeta {
+      margin: 1rem 0;
+    }
+  </style>
 </head>
 <body class="bg-light">
   <!-- Barra de Navegação -->
@@ -22,7 +49,6 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link text-white" href="/gestao_usuarios"><i class="fa-solid fa-user"></i> Gestão Usuários</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('notificacoes') }}"><i class="fa-solid fa-bell"></i> Notificações</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('calendario') }}"><i class="fa-solid fa-chart-pie"></i> Calendário</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('contas') }}"><i class="fa-solid fa-file-invoice-dollar"></i> Contas</a></li>
         </ul>
@@ -39,14 +65,20 @@
       </a>
     </div>
     
+    <!-- Aviso de saldo negativo, se houver -->
     {% if alerta_saldo %}
     <div class="alert alert-warning text-center">
       <i class="fa-solid fa-exclamation-triangle me-2"></i>{{ alerta_saldo }}
     </div>
     {% endif %}
-
+    
+    <!-- Aviso para gasto ultrapassado (exibido pelo JS) -->
+    <div id="avisoMeta" class="alert alert-danger text-center d-none">
+      <i class="fa-solid fa-triangle-exclamation me-2"></i> Atenção: O gasto total ultrapassou a meta estabelecida!
+    </div>
+    
     <div class="row">
-      <!-- Relatório de Metas (apenas mensal) -->
+      <!-- Relatório de Metas (Mensal) -->
       <div class="col-md-8 mb-4">
         <div class="card shadow-sm">
           <div class="card-header bg-primary text-white">
@@ -71,12 +103,12 @@
                   <td>
                     {% if dados.status == 'dentro' %}
                     <span class="badge bg-success">Dentro da meta</span>
-                    {% else %}
+                    {% else %} 
                     <span class="badge bg-danger">Meta Excedida</span>
-                    {% endif %}
+                    {% endif %}  
                   </td>
                 </tr>
-                {% endfor %}
+                {% endfor %}  
               </tbody>
             </table>
             <div class="text-center mt-3">
@@ -87,7 +119,7 @@
           </div>
         </div>
       </div>
-
+      
       <!-- Resumo Financeiro -->
       <div class="col-md-4 mb-4">
         <div class="card shadow-sm">
@@ -110,7 +142,7 @@
         </div>
       </div>
     </div>
-
+  
     <!-- Seção de Gráficos -->
     <div class="card shadow-sm mb-4">
       <div class="card-header bg-primary text-white">
@@ -121,41 +153,150 @@
       </div>
     </div>
   </div>
-
+  
+  <!-- Controles do Gráfico -->
+  <div class="chart-controls">
+    <button class="btn btn-primary chart-btn active" onclick="mudarTipoGrafico('bar')">
+      <i class="fa-solid fa-chart-bar"></i> Barras
+    </button>
+    <button class="btn btn-primary chart-btn" onclick="mudarTipoGrafico('pie')">
+      <i class="fa-solid fa-chart-pie"></i> Pizza
+    </button>
+    <button class="btn btn-primary chart-btn" onclick="mudarTipoGrafico('pareto')">
+      <i class="fa-solid fa-chart-line"></i> Pareto
+    </button>
+  </div>
+  
   <!-- Rodapé -->
   <footer class="bg-primary text-white text-center py-3 mt-4">
     <p class="mb-0">&copy; 2024 Controle Financeiro. Todos os direitos reservados.</p>
   </footer>
-
-  <!-- Scripts -->
+  
+  <!-- Scripts do Bootstrap e Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  
   <script>
-    const graficoData = {{ grafico_data|safe }};
-    const ctx = document.getElementById('metasGastosChart').getContext('2d');
-    const chart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: graficoData.categorias,
-        datasets: [
-          {
-            label: 'Meta',
-            data: graficoData.metas,
-            backgroundColor: 'rgba(54, 162, 235, 0.7)'
-          },
-          {
-            label: 'Gasto',
-            data: graficoData.gastos,
-            backgroundColor: 'rgba(255, 99, 132, 0.7)'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true }
-        }
+    let myChart = null;
+    const graficoData = JSON.parse('{{ grafico_data|safe }}');
+
+    // Calcula a economia percentual para cada categoria: ((meta - gasto)/meta * 100)
+    function calcularEconomiaPercentual() {
+      return graficoData.metas.map((meta, i) => {
+        let gasto = graficoData.gastos[i];
+        return meta != 0 ? ((meta - gasto) / meta * 100).toFixed(2) : 0;
+      });
+    }
+
+    function criarGrafico(tipo) {
+      const ctx = document.getElementById('metasGastosChart').getContext('2d');
+      if (myChart) myChart.destroy();
+      
+      const totalGastos = graficoData.gastos.reduce((a, b) => a + b, 0);
+      const totalMetas = graficoData.metas.reduce((a, b) => a + b, 0);
+      // Exibe ou esconde o aviso de meta ultrapassada
+      const avisoMeta = document.getElementById('avisoMeta');
+      if (totalGastos > totalMetas) {
+        avisoMeta.classList.remove('d-none');
+      } else {
+        avisoMeta.classList.add('d-none');
       }
-    });
+      
+      // Configuração base do gráfico
+      const config = {
+        type: tipo === 'pareto' ? 'bar' : tipo,
+        data: {
+          labels: graficoData.categorias,
+          datasets: [
+            {
+              label: 'Gasto Real',
+              data: graficoData.gastos,
+              backgroundColor: graficoData.cores,
+              borderColor: '#fff',
+              borderWidth: 2
+            },
+            // Exibe sempre o dataset de Meta (barras)
+            {
+              label: 'Meta',
+              data: graficoData.metas,
+              backgroundColor: graficoData.cores.map(c => c + '33'),
+              borderColor: graficoData.cores,
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const meta = graficoData.metas[ctx.dataIndex];
+                  const econ = meta - ctx.raw;
+                  return [
+                    `Gasto: R$ ${ctx.raw.toFixed(2)}`,
+                    `Meta: R$ ${meta.toFixed(2)}`,
+                    `Economia: R$ ${econ.toFixed(2)}`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            y: { 
+              beginAtZero: true,
+              ticks: { callback: value => `R$ ${value}` }
+            }
+          }
+        }
+      };
+
+      // Se o modo for 'pareto', adiciona uma linha que mostra a economia percentual
+      if (tipo === 'pareto') {
+        config.data.datasets.push({
+          label: 'Economia (%)',
+          data: calcularEconomiaPercentual(),
+          type: 'line',
+          borderColor: '#e74a3b',
+          backgroundColor: 'transparent',
+          yAxisID: 'y2'
+        });
+        config.options.scales.y2 = {
+          position: 'right',
+          ticks: { callback: value => `${value}%` },
+          grid: { drawOnChartArea: false }
+        };
+        // Adiciona a linha de anotação indicando 0% de economia (meta alcançada)
+        config.options.plugins.annotation = {
+          annotations: {
+            linhaZero: {
+              type: 'line',
+              yMin: 0,
+              yMax: 0,
+              borderColor: 'red',
+              borderWidth: 2,
+              label: {
+                content: 'Meta Alcançada',
+                enabled: true,
+                position: 'start'
+              }
+            }
+          }
+        };
+      }
+
+      myChart = new Chart(ctx, config);
+    }
+
+    function mudarTipoGrafico(tipo) {
+      criarGrafico(tipo);
+      document.querySelectorAll('.chart-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    // Inicialização: modo padrão 'bar'
+    criarGrafico('bar');
   </script>
 </body>
 </html>

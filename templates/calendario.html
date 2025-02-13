@@ -1,49 +1,94 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendário de Notificações</title>
-    <!-- Incluindo os arquivos CSS e JS do FullCalendar -->
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        #calendar {
-            max-width: 900px;
-            margin: 0 auto;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendário de Notificações</title>
+  <!-- FullCalendar CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
+  <!-- Bootstrap CSS (opcional para layout) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #calendar { max-width: 900px; margin: 0 auto; }
+    .filter-controls { margin: 1rem auto; max-width: 900px; }
+  </style>
 </head>
 <body>
-
-    <h1>Calendário de Notificações</h1>
-    <a href="{{ url_for('dashboard') }}">Voltar ao Dashboard</a>
-
+  <div class="container">
+    <h1 class="mb-4">Calendário de Notificações</h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mb-3">&larr; Voltar ao Dashboard</a>
+    
+    <!-- Controles de Filtro -->
+    <div class="filter-controls mb-3">
+      <div class="row">
+        <div class="col-md-4">
+          <input type="text" id="searchEvent" class="form-control" placeholder="Pesquisar por nome...">
+        </div>
+        <div class="col-md-8">
+          <div class="btn-group" role="group">
+            <button class="btn btn-outline-primary filter-btn" data-period="diario">Diário</button>
+            <button class="btn btn-outline-primary filter-btn" data-period="semanal">Semanal</button>
+            <button class="btn btn-outline-primary filter-btn" data-period="mensal">Mensal</button>
+            <button class="btn btn-outline-primary filter-btn" data-period="anual">Anual</button>
+            <button class="btn btn-outline-secondary filter-btn" data-period="">Todos</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <!-- Calendário -->
     <div id="calendar"></div>
+  </div>
 
-    <!-- Script para inicializar o FullCalendar -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var calendarEl = document.getElementById('calendar');
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',  // Modo de visualização inicial (mês)
-                events: {{ eventos | tojson }},  // Envia os eventos do backend para o FullCalendar
-                eventClick: function(info) {
-                    alert('Título: ' + info.event.title + '\nDescrição: ' + info.event.extendedProps.description);
-                }
-            });
-            calendar.render();
+  <!-- FullCalendar JS -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var calendarEl = document.getElementById('calendar');
+      var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        events: {{ eventos | tojson }},  // Os eventos devem ser enviados pelo backend
+        eventDidMount: function(info) {
+          // Exemplo: destaque para eventos que estejam a 10 dias de antecedência (futuro)
+          const eventDate = new Date(info.event.start);
+          const today = new Date();
+          const diffDays = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+          if(diffDays <= 10 && diffDays >= 0) {
+            info.el.style.border = '2px solid red';
+          }
+        },
+        eventClick: function(info) {
+          alert('Título: ' + info.event.title + '\nDescrição: ' + info.event.extendedProps.description);
+        }
+      });
+      calendar.render();
+      
+      // Filtro por período
+      document.querySelectorAll('.filter-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          const period = this.getAttribute('data-period');
+          // Aqui você pode recarregar a página com o parâmetro de período, ou usar a API do FullCalendar para filtrar eventos
+          // Exemplo simples: recarregar com query string:
+          window.location.href = '{{ url_for("calendario") }}' + (period ? '?periodo=' + period : '');
         });
-    </script>
+      });
+      
+      // Filtro por nome (busca simples, filtrando eventos visíveis)
+      document.getElementById('searchEvent').addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        calendar.getEvents().forEach(function(event) {
+          // Se o título do evento não contiver o termo, remova-o do calendário
+          if(!event.title.toLowerCase().includes(searchTerm)) {
+            event.setProp('display', 'none');
+          } else {
+            event.setProp('display', 'auto');
+          }
+        });
+      });
+    });
+  </script>
 </body>
 </html>
-
-<!--
-# Este código é propriedade de Arnaldo Rocha Filho
-# Direitos Reservados © 2024
- --> 

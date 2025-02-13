@@ -4,7 +4,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime, timedelta
 import sqlite3
 import os
-import csv
 import json
 
 app = Flask(__name__)
@@ -14,6 +13,10 @@ app.secret_key = os.urandom(24)
 scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
+
+# =====================================================
+# Funções Auxiliares e Inicialização do Banco de Dados
+# =====================================================
 
 def conectar_bd():
     try:
@@ -64,7 +67,7 @@ def inicializar_bd():
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS Configuracoes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        poupanca REAL DEFAULT 10.0,
+        investimento REAL DEFAULT 10.0,
         reserva REAL DEFAULT 10.0,
         causas_sociais REAL DEFAULT 10.0,
         lazer REAL DEFAULT 20.0,
@@ -81,18 +84,21 @@ def inicializar_bd():
     cursor.execute('''CREATE TABLE IF NOT EXISTS Avisos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         usuario_id INTEGER NOT NULL,
-        tipo TEXT NOT NULL, -- 'pagar' ou 'receber'
+        tipo TEXT NOT NULL,
         nome TEXT NOT NULL,
         valor REAL NOT NULL,
         data DATE NOT NULL,
         status TEXT DEFAULT 'pendente'
     );''')
 
-    cursor.execute('''INSERT INTO Configuracoes (poupanca, reserva, causas_sociais, lazer, necessidades)
-    SELECT 10, 10, 10, 20, 50 WHERE NOT EXISTS (SELECT 1 FROM Configuracoes)''')
-
+    cursor.execute('''INSERT INTO Configuracoes (investimento, reserva, causas_sociais, lazer, necessidades)
+                      SELECT 10, 10, 10, 20, 50 WHERE NOT EXISTS (SELECT 1 FROM Configuracoes)''')
     conn.commit()
     conn.close()
+
+# =====================================================
+# Rotas de Autenticação (Login / Cadastro)
+# =====================================================
 
 @app.route('/')
 def index():
@@ -130,11 +136,11 @@ def cadastro():
             cursor.execute("SELECT id FROM usuarios WHERE username = ?", (username,))
             existing_user = cursor.fetchone()
             if existing_user:
-                flash("Este usuário já existe. Por favor, escolha um nome de usuário diferente.", "error")
+                flash("Este usuário já existe. Por favor, escolha outro nome.", "error")
                 return redirect(url_for('cadastro'))
             cursor.execute("INSERT INTO usuarios (username, senha) VALUES (?, ?)", (username, hashed_password))
             conn.commit()
-            flash("Cadastro realizado com sucesso! Faça o login para acessar sua conta.", "success")
+            flash("Cadastro realizado com sucesso! Faça o login.", "success")
             return redirect(url_for('index'))
         except Exception as e:
             flash(f"Erro ao cadastrar usuário: {str(e)}", "error")
@@ -143,9 +149,10 @@ def cadastro():
             conn.close()
     return render_template('cadastro.html')
 
-# --- Scheduler Tasks ---
+# =====================================================
+# Scheduler Tasks (Notificações e Resumo Diário)
+# =====================================================
 
-# Notificação para transações com data igual a hoje (mesmo funcionamento anterior)
 @scheduler.task('interval', id='notificar_transacoes', minutes=60)
 def notificar_transacoes():
     conn = conectar_bd()
@@ -156,13 +163,12 @@ def notificar_transacoes():
     cursor.execute("SELECT * FROM Transacoes WHERE data = ? AND notificado = 0", (data_atual,))
     transacoes = cursor.fetchall()
     for transacao in transacoes:
-        mensagem = f"Hoje: {transacao['tipo'].capitalize()} '{transacao['nome']}' de R${transacao['valor']} vence hoje."
+        mensagem = f"Hoje: {transacao['tipo'].capitalize()} '{transacao['nome']}' de R$ {transacao['valor']} vence hoje."
         cursor.execute("INSERT INTO Notificacoes (mensagem) VALUES (?)", (mensagem,))
         cursor.execute("UPDATE Transacoes SET notificado = 1 WHERE id = ?", (transacao['id'],))
     conn.commit()
     conn.close()
 
-# Nova task para notificar com antecedência (para transações de amanhã)
 @scheduler.task('interval', id='notificar_transacoes_antecipadas', minutes=60)
 def notificar_transacoes_antecipadas():
     conn = conectar_bd()
@@ -175,15 +181,13 @@ def notificar_transacoes_antecipadas():
     for transacao in transacoes:
         tipo = transacao['tipo'].strip().lower()
         nome = transacao['nome'].strip().lower()
-        # Notifica se for gasto com "aluguel" ou se for renda (recebimento)
-        if (tipo == 'gasto' and 'aluguel' in nome) or (tipo == 'renda'):
-            mensagem = f"Amanhã: {transacao['tipo'].capitalize()} '{transacao['nome']}' de R${transacao['valor']}."
+        if (tipo == 'gasto' and 'investimento' in nome) or (tipo == 'renda'):
+            mensagem = f"Amanhã: {transacao['tipo'].capitalize()} '{transacao['nome']}' de R$ {transacao['valor']}."
             cursor.execute("INSERT INTO Notificacoes (mensagem) VALUES (?)", (mensagem,))
             cursor.execute("UPDATE Transacoes SET notificado_antecipado = 1 WHERE id = ?", (transacao['id'],))
     conn.commit()
     conn.close()
 
-# Task para resumo diário (já existente)
 @scheduler.task('cron', id='resumo_diario', hour=8)
 def resumo_diario():
     conn = conectar_bd()
@@ -194,13 +198,15 @@ def resumo_diario():
     cursor.execute("SELECT * FROM Transacoes WHERE data = ?", (data_atual,))
     transacoes = cursor.fetchall()
     if transacoes:
-        resumo = "\n".join(f"{t['tipo'].capitalize()} - {t['nome']} - R${t['valor']}" for t in transacoes)
+        resumo = "\n".join(f"{t['tipo'].capitalize()} - {t['nome']} - R$ {t['valor']}" for t in transacoes)
         mensagem = f"Resumo do dia {data_atual}:\n{resumo}"
         cursor.execute("INSERT INTO Notificacoes (mensagem) VALUES (?)", (mensagem,))
     conn.commit()
     conn.close()
 
-# --- Rotas do Sistema ---
+# =====================================================
+# Rotas de Sistema (Notificações, Calendário, Usuários)
+# =====================================================
 
 @app.route('/notificacoes')
 def notificacoes():
@@ -281,61 +287,73 @@ def excluir_usuario(user_id):
         flash(f"Erro ao excluir usuário: {str(e)}", "error")
         return redirect(url_for('gestao_usuarios'))
 
+# =====================================================
+# Rotas de Transações e Metas
+# =====================================================
+
+# Dashboard – exibe os dados do mês atual
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
         flash("Você não está autenticado.", "error")
         return redirect(url_for('index'))
     try:
+        # Intervalo do mês atual
+        data_inicio = datetime.now().replace(day=1).strftime('%Y-%m-%d')
+        data_fim = (datetime.now().replace(day=28) + timedelta(days=4)).replace(day=1).strftime('%Y-%m-%d')
+        
         conn = conectar_bd()
         if conn is None:
             flash("Erro ao conectar ao banco de dados", "danger")
             return redirect(url_for('index'))
         cursor = conn.cursor()
-        # Apenas transações mensais serão consideradas no dashboard
-        cursor.execute("SELECT * FROM Transacoes WHERE periodo = 'mensal' ORDER BY data DESC")
+        # Filtra transações do mês atual e com período 'mensal'
+        cursor.execute("SELECT * FROM Transacoes WHERE periodo = 'mensal' AND data BETWEEN ? AND ? ORDER BY data DESC", (data_inicio, data_fim))
         transacoes = cursor.fetchall()
         cursor.execute("SELECT * FROM Configuracoes LIMIT 1")
         configuracoes = cursor.fetchone()
-        cursor.execute("SELECT SUM(valor) FROM Transacoes WHERE LOWER(tipo) = 'renda' AND periodo = 'mensal'")
+        cursor.execute("SELECT SUM(valor) FROM Transacoes WHERE LOWER(tipo) = 'renda' AND periodo = 'mensal' AND data BETWEEN ? AND ?", (data_inicio, data_fim))
         total_rendas = cursor.fetchone()[0] or 0
-        cursor.execute("SELECT SUM(valor) FROM Transacoes WHERE LOWER(tipo) = 'gasto' AND periodo = 'mensal'")
+        cursor.execute("SELECT SUM(valor) FROM Transacoes WHERE LOWER(tipo) = 'gasto' AND periodo = 'mensal' AND data BETWEEN ? AND ?", (data_inicio, data_fim))
         total_gastos = cursor.fetchone()[0] or 0
-        saldo = total_rendas - total_gastos
+        saldo = round(total_rendas - total_gastos, 2)
         alerta_saldo = "Seu saldo está negativo. Recomenda-se aumentar a renda ou reduzir os gastos." if saldo < 0 else ""
         metas = {
-            'poupanca': total_rendas * (configuracoes['poupanca'] / 100),
+            'investimento': total_rendas * (configuracoes['investimento'] / 100),
             'reserva': total_rendas * (configuracoes['reserva'] / 100),
             'causas_sociais': total_rendas * (configuracoes['causas_sociais'] / 100),
             'lazer': total_rendas * (configuracoes['lazer'] / 100),
-            'necessidades': total_rendas * (configuracoes['necessidades'] / 100),
+            'necessidades': total_rendas * (configuracoes['necessidades'] / 100)
         }
         orientacao_gastos = {
-            'poupanca': "Poupança é importante para garantir um futuro tranquilo. Tente não gastar mais do que a meta.",
+            'investimento': "Investimento é importante para garantir uma renda extra.",
             'reserva': "Uma reserva de emergência é crucial. Não use este valor para despesas do dia a dia.",
-            'causas_sociais': "Doações são uma ótima maneira de ajudar. Se você tem condições, destine esse valor com consciência.",
-            'lazer': "Lazer é importante, mas procure não ultrapassar sua meta para não comprometer outras necessidades.",
-            'necessidades': "Esses gastos são essenciais, mas sempre busque eficiência e evite excessos.",
+            'causas_sociais': "Doações são uma ótima forma de ajudar. Destine esse valor com consciência.",
+            'lazer': "Lazer é importante, mas não ultrapasse sua meta para não comprometer outras necessidades.",
+            'necessidades': "Esses gastos são essenciais, mas sempre busque eficiência e evite excessos."
         }
-        categorias = ['necessidades', 'lazer', 'causas_sociais', 'reserva', 'poupanca']
+        categorias = ['necessidades', 'lazer', 'causas_sociais', 'reserva', 'investimento']
         gastos = {}
-        for categoria in categorias:
-            cursor.execute("SELECT SUM(valor) FROM Transacoes WHERE LOWER(categoria) = ? AND LOWER(tipo) = 'gasto' AND periodo = 'mensal'", (categoria.lower(),))
-            gastos[categoria] = cursor.fetchone()[0] or 0
-        comparacao = {categoria: {
-                "meta": metas[categoria],
-                "gasto": gastos[categoria],
-                "status": "dentro" if gastos[categoria] <= metas[categoria] else "excedido"
-            } for categoria in categorias}
-        # Preparar dados para o gráfico
+        for cat in categorias:
+            cursor.execute("SELECT SUM(valor) FROM Transacoes WHERE LOWER(categoria) = ? AND LOWER(tipo) = 'gasto' AND periodo = 'mensal' AND data BETWEEN ? AND ?", (cat.lower(), data_inicio, data_fim))
+            gastos[cat] = cursor.fetchone()[0] or 0
+        comparacao = {cat: {
+                "meta": metas[cat],
+                "gasto": gastos[cat],
+                "status": "dentro" if gastos[cat] <= metas[cat] else "excedido"
+            } for cat in categorias}
+        # Dados para o gráfico
+        cores = ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b']
         grafico_data = {
-            'categorias': categorias,
-            'metas': [metas[c] for c in categorias],
-            'gastos': [gastos[c] for c in categorias]
+            'categorias': [cat.capitalize() for cat in categorias],
+            'metas': [metas[cat] for cat in categorias],
+            'gastos': [gastos[cat] for cat in categorias],
+            'cores': cores,
+            'cores_economia': [c + '33' for c in cores]
         }
         conn.close()
         return render_template('dashboard.html',
-                               saldo=round(saldo, 2),
+                               saldo=saldo,
                                metas={k: round(v, 2) for k, v in metas.items()},
                                alerta_saldo=alerta_saldo,
                                orientacao_gastos=orientacao_gastos,
@@ -349,21 +367,37 @@ def dashboard():
         flash(f"Erro ao carregar transações: {str(e)}", "error")
         return redirect(url_for('index'))
 
-# Nova rota: Página para visualizar/editar/inserir transações (gastos e rendas)
+# =====================================================
+# Rota para Visualizar/Editar/Inserir Transações com Filtro
+# =====================================================
+
 @app.route('/transacoes', methods=['GET'])
 def transacoes_view():
     if 'user_id' not in session:
         flash("Você não está autenticado.", "error")
         return redirect(url_for('index'))
+    # Filtra por período e pesquisa (query string)
+    periodo = request.args.get('periodo')  # valores esperados: 'diario', 'semanal', 'mensal', 'anual'
+    pesquisa = request.args.get('pesquisa', '').lower()
     conn = conectar_bd()
     if conn is None:
         flash("Erro ao conectar ao banco de dados", "danger")
         return redirect(url_for('dashboard'))
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM Transacoes ORDER BY data DESC")
+    if periodo:
+        cursor.execute("SELECT * FROM Transacoes WHERE periodo = ? ORDER BY data DESC", (periodo,))
+    else:
+        cursor.execute("SELECT * FROM Transacoes ORDER BY data DESC")
     transacoes = cursor.fetchall()
     conn.close()
-    return render_template('transacoes.html', transacoes=transacoes)
+    # Se houver termo de pesquisa, filtra os registros localmente
+    if pesquisa:
+        transacoes = [t for t in transacoes if pesquisa in t['nome'].lower()]
+    return render_template('transacoes.html', transacoes=transacoes, periodo=periodo, pesquisa=pesquisa)
+
+# =====================================================
+# Rotas para Inserir, Editar e Excluir Transações
+# =====================================================
 
 @app.route('/adicionar_transacao', methods=['GET', 'POST'])
 def adicionar_transacao():
@@ -373,13 +407,16 @@ def adicionar_transacao():
         valor = float(request.form['valor'])
         periodo = request.form['periodo']
         data = request.form['data']
+        # Se for investimento, trata-o como gasto inicialmente
+        if tipo == 'investimento':
+            tipo = 'gasto'
         categoria = request.form['categoria'] if tipo == 'gasto' else 'necessidades'
         conn = conectar_bd()
         if conn is None:
             flash("Erro ao conectar ao banco de dados", "danger")
             return redirect(url_for('index'))
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO Transacoes (tipo, nome, valor, periodo, categoria, data) VALUES (?, ?, ?, ?, ?, ?)", 
+        cursor.execute("INSERT INTO Transacoes (tipo, nome, valor, periodo, categoria, data) VALUES (?, ?, ?, ?, ?, ?)",
                        (tipo, nome, valor, periodo, categoria, data))
         conn.commit()
         if data == datetime.now().strftime('%Y-%m-%d'):
@@ -402,6 +439,8 @@ def editar_transacao(id):
         valor = float(request.form['valor'])
         periodo = request.form['periodo']
         data = request.form['data']
+        if tipo == 'investimento':
+            tipo = 'gasto'
         categoria = request.form['categoria'] if tipo == 'gasto' else 'necessidades'
         cursor.execute("UPDATE Transacoes SET tipo = ?, nome = ?, valor = ?, periodo = ?, categoria = ?, data = ? WHERE id = ?",
                        (tipo, nome, valor, periodo, categoria, data, id))
@@ -429,6 +468,10 @@ def excluir_transacao(id):
     flash("Transação excluída com sucesso!", "success")
     return redirect(url_for('transacoes_view'))
 
+# =====================================================
+# Rota para Editar Metas
+# =====================================================
+
 @app.route('/editar_metas', methods=['GET', 'POST'])
 def editar_metas():
     conn = conectar_bd()
@@ -439,13 +482,13 @@ def editar_metas():
     cursor.execute("SELECT * FROM Configuracoes LIMIT 1")
     configuracoes = cursor.fetchone()
     if request.method == 'POST':
-        poupanca = float(request.form['poupanca'])
+        investimento = float(request.form['investimento'])
         reserva = float(request.form['reserva'])
         causas_sociais = float(request.form['causas_sociais'])
         lazer = float(request.form['lazer'])
         necessidades = float(request.form['necessidades'])
-        cursor.execute("UPDATE Configuracoes SET poupanca = ?, reserva = ?, causas_sociais = ?, lazer = ?, necessidades = ? WHERE id = 1",
-                       (poupanca, reserva, causas_sociais, lazer, necessidades))
+        cursor.execute("UPDATE Configuracoes SET investimento = ?, reserva = ?, causas_sociais = ?, lazer = ?, necessidades = ? WHERE id = 1",
+                       (investimento, reserva, causas_sociais, lazer, necessidades))
         conn.commit()
         conn.close()
         flash("Metas atualizadas com sucesso!", "success")
@@ -453,7 +496,10 @@ def editar_metas():
     conn.close()
     return render_template('editar_metas.html', configuracoes=configuracoes)
 
-# Nova rota: Página para consultar devedores e contas a pagar
+# =====================================================
+# Rotas para Contas e Conselhos Financeiros
+# =====================================================
+
 @app.route('/contas')
 def contas():
     if 'user_id' not in session:
@@ -469,6 +515,20 @@ def contas():
     conn.close()
     return render_template('contas.html', avisos=avisos)
 
+@app.route('/conselhos')
+def conselhos():
+    orientacoes = {
+        "investimento": "Investimento ou poupança: garanta uma fonte extra de renda. Não gaste além da meta.",
+        "reserva": "Uma reserva de emergência é crucial para enfrentar imprevistos. Não utilize para despesas correntes.",
+        "causas_sociais": "Doações são uma ótima forma de ajudar. Destine esse valor com consciência.",
+        "lazer": "Lazer é importante, mas não ultrapasse sua meta para não comprometer outras áreas.",
+        "necessidades": "Gastos essenciais devem ser otimizados: busque eficiência e evite excessos."
+    }
+    return render_template('conselhos.html', orientacoes=orientacoes)
+
+# =====================================================
+# Execução do Aplicativo
+# =====================================================
 if __name__ == '__main__':
     inicializar_bd()
     app.run(debug=True)

@@ -15,7 +15,6 @@
         <select class="form-select" id="tipo" name="tipo" required>
           <option value="gasto" {% if transacao.tipo|lower == 'gasto' %}selected{% endif %}>Gasto</option>
           <option value="renda" {% if transacao.tipo|lower == 'renda' %}selected{% endif %}>Renda</option>
-          <option value="investimento" {% if transacao.tipo|lower == 'investimento' %}selected{% endif %}>Investimento</option>
           <!-- Outras opções -->
         </select>
       </div>
@@ -50,7 +49,9 @@
           <option value="necessidades" {% if transacao.categoria|lower == 'necessidades' %}selected{% endif %}>Necessidades</option>
           <option value="lazer" {% if transacao.categoria|lower == 'lazer' %}selected{% endif %}>Lazer</option>
           <option value="investimento" {% if transacao.categoria|lower == 'investimento' %}selected{% endif %}>Investimento</option>
-          <option value="aluguel" {% if transacao.categoria|lower == 'aluguel' %}selected{% endif %}>Aluguel</option>
+          <option value="causas_sociais" {% if transacao.categoria|lower == 'causas_sociais' %}selected{% endif %}>Causa Social</option>
+          <option value="reserva" {% if transacao.categoria|lower == 'reserva' %}selected{% endif %}>Reserva</option>
+          
           <!-- Outras categorias se necessário -->
         </select>
       </div>
