@@ -40,7 +40,7 @@
     <!-- Calendário -->
     <div id="calendar"></div>
     
-    <!-- Área para Relatório e Gráficos (opcional, similar ao Dashboard) -->
+    <!-- Área para Relatório e Gráficos -->
     <div class="mt-4">
       <h2 class="text-center">Relatório e Gráficos</h2>
       <canvas id="calendarioChart"></canvas>
@@ -55,8 +55,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      const calendarEl = document.getElementById('calendar');
-      const calendar = new FullCalendar.Calendar(calendarEl, {
+      var calendarEl = document.getElementById('calendar');
+      var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         events: {{ eventos | tojson }},  // Eventos enviados pelo backend
         eventClick: function(info) {
@@ -65,17 +65,17 @@
       });
       calendar.render();
       
-      // Filtro por período: recarrega a página com o parâmetro na query string
+      // Filtro por período: recarrega a página com o parâmetro de período
       document.querySelectorAll('.filter-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
-          const period = this.getAttribute('data-period');
+          var period = this.getAttribute('data-period');
           window.location.href = '{{ url_for("calendario") }}' + (period ? '?periodo=' + period : '');
         });
       });
       
       // Filtro por nome: ajusta a exibição dos eventos
       document.getElementById('searchEvent').addEventListener('keyup', function() {
-        const searchTerm = this.value.toLowerCase();
+        var searchTerm = this.value.toLowerCase();
         calendar.getEvents().forEach(function(event) {
           if (!event.title.toLowerCase().includes(searchTerm)) {
             event.setProp('display', 'none');
@@ -85,15 +85,15 @@
         });
       });
       
-      // Exemplo de gráfico de relatório usando Chart.js (dados enviados pelo backend)
-      const ctx = document.getElementById('calendarioChart').getContext('2d');
-      const reportChart = new Chart(ctx, {
+      // Exemplo de gráfico de relatório usando Chart.js (você deve enviar relatorio_datas e relatorio_gastos pelo backend)
+      var ctx = document.getElementById('calendarioChart').getContext('2d');
+      var reportChart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: {{ relatorio_datas | tojson }}, // Datas ou períodos (enviadas pelo backend)
+          labels: {{ relatorio_datas | tojson }}, // Datas ou períodos
           datasets: [{
             label: 'Total de Gastos',
-            data: {{ relatorio_gastos | tojson }},  // Valores enviados pelo backend
+            data: {{ relatorio_gastos | tojson }},  // Valores agregados
             borderColor: '#e74a3b',
             fill: false,
             tension: 0.1
@@ -104,7 +104,7 @@
           scales: {
             y: {
               beginAtZero: true,
-              ticks: { callback: value => `R$ ${value}` }
+              ticks: { callback: function(value) { return 'R$ ' + value; } }
             }
           }
         }

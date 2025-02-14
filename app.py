@@ -283,10 +283,11 @@ def dashboard():
         flash("Você não está autenticado.", "error")
         return redirect(url_for('index'))
     try:
-        # Define o intervalo do mês atual
+         # Calcular datas para o relatório (exemplo)
         data_inicio = datetime.now().replace(day=1).strftime('%Y-%m-%d')
         data_fim = (datetime.now().replace(day=28) + timedelta(days=4)).replace(day=1).strftime('%Y-%m-%d')
-        
+        relatorio_datas = {'inicio': data_inicio, 'fim': data_fim}
+    
         conn = conectar_bd()
         if conn is None:
             flash("Erro ao conectar ao banco de dados", "danger")
@@ -338,6 +339,7 @@ def dashboard():
         }
         conn.close()
         return render_template('dashboard.html',
+                               relatorio_datas=relatorio_datas,
                                saldo=saldo,
                                metas={k: round(v, 2) for k, v in metas.items()},
                                alerta_saldo=alerta_saldo,
