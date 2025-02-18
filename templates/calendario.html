@@ -19,7 +19,7 @@
     <h1 class="mb-4">Calendário de Notificações</h1>
     <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mb-3">&larr; Voltar ao Dashboard</a>
     
-    <!-- Controles de Filtro -->
+    <!-- Filtros de Período e Pesquisa -->
     <div class="filter-controls mb-3">
       <div class="row g-2">
         <div class="col-md-4">
@@ -51,43 +51,39 @@
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Chart.js (para relatório) -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      var calendarEl = document.getElementById('calendar');
-      var calendar = new FullCalendar.Calendar(calendarEl, {
+      const calendarEl = document.getElementById('calendar');
+      const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
-        events: {{ eventos | tojson }},  // Eventos enviados pelo backend
+        events: {{ eventos | tojson }}, // Eventos enviados pelo backend
         eventClick: function(info) {
           alert('Título: ' + info.event.title + '\nDescrição: ' + info.event.extendedProps.description);
         }
       });
       calendar.render();
       
-      // Filtro por período: recarrega a página com o parâmetro de período
+      // Filtro por período
       document.querySelectorAll('.filter-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
-          var period = this.getAttribute('data-period');
-          window.location.href = '{{ url_for("calendario") }}' + (period ? '?periodo=' + period : '');
+          const period = this.getAttribute('data-period');
+          window.location.href = '{{ url_for("calendario_view") }}' + (period ? '?periodo=' + period : '');
         });
       });
       
-      // Filtro por nome: ajusta a exibição dos eventos
+      // Filtro por nome
       document.getElementById('searchEvent').addEventListener('keyup', function() {
-        var searchTerm = this.value.toLowerCase();
+        const searchTerm = this.value.toLowerCase();
         calendar.getEvents().forEach(function(event) {
-          if (!event.title.toLowerCase().includes(searchTerm)) {
-            event.setProp('display', 'none');
-          } else {
-            event.setProp('display', 'auto');
-          }
+          event.setProp('display', event.title.toLowerCase().includes(searchTerm) ? 'auto' : 'none');
         });
       });
       
-      // Exemplo de gráfico de relatório usando Chart.js (você deve enviar relatorio_datas e relatorio_gastos pelo backend)
-      var ctx = document.getElementById('calendarioChart').getContext('2d');
-      var reportChart = new Chart(ctx, {
+      // Exemplo de gráfico com Chart.js para o relatório
+      const ctx = document.getElementById('calendarioChart').getContext('2d');
+      const reportChart = new Chart(ctx, {
         type: 'line',
         data: {
           labels: {{ relatorio_datas | tojson }}, // Datas ou períodos
@@ -104,7 +100,9 @@
           scales: {
             y: {
               beginAtZero: true,
-              ticks: { callback: function(value) { return 'R$ ' + value; } }
+              ticks: {
+                callback: function(value) { return 'R$ ' + value; }
+              }
             }
           }
         }
@@ -112,4 +110,3 @@
     });
   </script>
 </body>
-</html>

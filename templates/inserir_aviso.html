@@ -31,10 +31,10 @@
   <!-- Conteúdo Principal -->
   <div class="container py-5">
     <h1 class="mb-4">Inserir Aviso</h1>
-    <a href="/contas" class="btn btn-secondary mb-3">
-      <i class="fa-solid fa-arrow-left"></i> Voltar
-    </a>
-    <form action="{{ url_for('inserir_aviso') }}" method="POST">
+      <!-- Botão Voltar -->
+      <a href="javascript:history.back()" class="btn-voltar mb-3"> ⬅ </a>
+      
+      <form action="{{ url_for('inserir_aviso') }}" method="POST">
       <div class="mb-3">
         <label for="tipo" class="form-label">Tipo de Aviso</label>
         <select class="form-select" id="tipo" name="tipo" required>
