@@ -1,0 +1,25 @@
+# Ignorar o arquivo de variáveis de ambiente
+.env
+
+# Ignorar arquivos SQLite do banco local
+*.db
+*.sqlite3
+
+# Ignorar pastas e arquivos Python compilados
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignorar pasta de cache do Flask
+instance/
+
+# Ignorar arquivos de log
+*.log
+
+# Ignorar arquivos de ambiente do editor (exemplos)
+.vscode/
+.idea/
+
+# Ignorar arquivos temporários do sistema
+.DS_Store
+financeiro.db

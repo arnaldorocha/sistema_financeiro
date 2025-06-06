@@ -48,9 +48,12 @@
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link text-white" href="/gestao_usuarios"><i class="fa-solid fa-user"></i> Gestão Usuários</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('calendario') }}"><i class="fa-solid fa-chart-pie"></i> Calendário</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('contas') }}"><i class="fa-solid fa-file-invoice-dollar"></i> Contas</a></li>
+          <a href="/transacoes" class="btn btn-outline-primary">
+            <i class="fa-solid fa-plus"></i> Transações
+          </a>
+        
         </ul>
       </div>
     </div>
@@ -60,9 +63,6 @@
   <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h1 class="text-primary">Dashboard Financeiro - Relatório Mensal</h1>
-      <a href="/transacoes" class="btn btn-outline-primary">
-        <i class="fa-solid fa-plus"></i> Insira Gastos e Rendas
-      </a>
     </div>
     
     <!-- Aviso de saldo negativo, se houver -->

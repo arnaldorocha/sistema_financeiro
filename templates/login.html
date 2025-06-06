@@ -9,7 +9,6 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/index.css">
-    
 </head>
 <body>
     <div class="container hero text-center">
@@ -25,43 +24,33 @@
             <input type="submit" value="Acessar" id="botao_acessar" class="btn btn-primary btn-lg mt-4 shadow">
         </form>
         <a href="{{ url_for('cadastro') }}" class="btn btn-link mt-3">Cadastrar-se</a>
+        <a href="{{ url_for('cadastro_admin', convite='') }}" class="btn btn-link mt-3">Cadastrar Administrador</a>
     </div>
-</div>
 
-<!-- Flash Messages -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <div class="flash-messages-container">
-            {% for message, category in messages %}
-                <div class="flash-message {{ category }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-{% endwith %}
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages-container">
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 
-
-
-    </div>
     <footer class="text-center py-3">
         <p class="mb-0">Desenvolvido com 💻 e 💡 por <strong>Arnaldo</strong>.</p>
     </footer>
-    
-<!-- Script para fechar mensagens flash -->
-<script>
-    setTimeout(function() {
-        var flashMessages = document.getElementsByClassName('flash-message');
-        for (var i = 0; i < flashMessages.length; i++) {
-            flashMessages[i].style.display = 'none';
-        }
-    }, 6000);
-</script>
 
+    <script>
+        setTimeout(function() {
+            var flashMessages = document.getElementsByClassName('flash-message');
+            for (var i = 0; i < flashMessages.length; i++) {
+                flashMessages[i].style.display = 'none';
+            }
+        }, 6000);
+    </script>
 </body>
 </html>
-
-<!--
-# Este código é propriedade de Arnaldo Rocha Filho
-# Direitos Reservados © 2024
- --> 
