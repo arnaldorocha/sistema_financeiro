@@ -769,5 +769,4 @@ def calendario():
 # Execução do Aplicativo
 # =====================================================
 if __name__ == '__main__':
-    inicializar_bd()
-    app.run(debug=True)
+    app.run
