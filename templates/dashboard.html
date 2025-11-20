@@ -39,25 +39,41 @@
 <body class="bg-light">
   <!-- Barra de Navegação -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
-    <div class="container">
-      <a class="navbar-brand d-flex align-items-center" href="/">
-        <i class="fa-solid fa-piggy-bank me-2"></i> Controle Financeiro
-      </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('calendario') }}"><i class="fa-solid fa-chart-pie"></i> Calendário</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="{{ url_for('contas') }}"><i class="fa-solid fa-file-invoice-dollar"></i> Contas</a></li>
-          <a href="/transacoes" class="btn btn-outline-primary">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="/">
+      <i class="fa-solid fa-piggy-bank me-2"></i> Controle Financeiro
+    </a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto align-items-lg-center">
+
+        <li class="nav-item">
+          <a class="nav-link text-white" href="{{ url_for('calendario') }}">
+            <i class="fa-solid fa-chart-pie"></i> Calendário
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link text-white" href="{{ url_for('contas') }}">
+            <i class="fa-solid fa-file-invoice-dollar"></i> Contas
+          </a>
+        </li>
+
+        <!-- Botão Transações ajustado para funcionar no mobile -->
+        <li class="nav-item mt-2 mt-lg-0">
+          <a href="/transacoes" class="btn btn-light text-primary fw-bold w-100">
             <i class="fa-solid fa-plus"></i> Transações
           </a>
-        
-        </ul>
-      </div>
+        </li>
+
+      </ul>
     </div>
-  </nav>
+  </div>
+</nav>
 
   <!-- Conteúdo Principal -->
   <div class="container py-5">
