@@ -1,4 +1,4 @@
-import os
+ import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_apscheduler import APScheduler
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -624,6 +624,6 @@ def calendario():
 # =====================================================
 # Execução do Aplicativo
 # =====================================================
-if __name__ == '__main__':
-    inicializar_bd()
-    app.run(debug=True)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
