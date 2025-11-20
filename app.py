@@ -766,8 +766,8 @@ def calendario():
     )
 
 # =====================================================
-# Execução do Aplicativo
+# Execução do Aplicativo (LOCAL APENAS)
 # =====================================================
 if __name__ == '__main__':
     inicializar_bd()
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
