@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Editar Transação</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container mt-5">
+    <h2 class="mb-4">Editar Transação</h2>
+    <form action="{{ url_for('editar_transacao', id=transacao.id) }}" method="post">
+      <!-- Tipo de Transação -->
+      <div class="mb-3">
+        <label for="tipo" class="form-label">Tipo de Transação</label>
+        <select class="form-select" id="tipo" name="tipo" required>
+          <option value="gasto" {% if transacao.tipo|lower == 'gasto' %}selected{% endif %}>Gasto</option>
+          <option value="renda" {% if transacao.tipo|lower == 'renda' %}selected{% endif %}>Renda</option>
+          <!-- Outras opções -->
+        </select>
+      </div>
+      
+      <!-- Nome -->
+      <div class="mb-3">
+        <label for="nome" class="form-label">Nome</label>
+        <input type="text" class="form-control" id="nome" name="nome" value="{{ transacao.nome }}" required>
+      </div>
+      
+      <!-- Valor -->
+      <div class="mb-3">
+        <label for="valor" class="form-label">Valor</label>
+        <input type="number" step="0.01" class="form-control" id="valor" name="valor" value="{{ transacao.valor }}" required>
+      </div>
+      
+      <!-- Período -->
+      <div class="mb-3">
+        <label for="periodo" class="form-label">Período</label>
+        <select class="form-select" id="periodo" name="periodo" required>
+          <option value="diario" {% if transacao.periodo|lower == 'diario' %}selected{% endif %}>Diário</option>
+          <option value="semanal" {% if transacao.periodo|lower == 'semanal' %}selected{% endif %}>Semanal</option>
+          <option value="mensal" {% if transacao.periodo|lower == 'mensal' %}selected{% endif %}>Mensal</option>
+          <option value="anual" {% if transacao.periodo|lower == 'anual' %}selected{% endif %}>Anual</option>
+        </select>
+      </div>
+      
+      <!-- Categoria -->
+      <div class="mb-3">
+        <label for="categoria" class="form-label">Categoria</label>
+        <select class="form-select" id="categoria" name="categoria" required>
+          <option value="necessidades" {% if transacao.categoria|lower == 'necessidades' %}selected{% endif %}>Necessidades</option>
+          <option value="lazer" {% if transacao.categoria|lower == 'lazer' %}selected{% endif %}>Lazer</option>
+          <option value="investimento" {% if transacao.categoria|lower == 'investimento' %}selected{% endif %}>Investimento</option>
+          <option value="causas_sociais" {% if transacao.categoria|lower == 'causas_sociais' %}selected{% endif %}>Causa Social</option>
+          <option value="reserva" {% if transacao.categoria|lower == 'reserva' %}selected{% endif %}>Reserva</option>
+          
+          <!-- Outras categorias se necessário -->
+        </select>
+      </div>
+      
+      <!-- Data -->
+      <div class="mb-3">
+        <label for="data" class="form-label">Data</label>
+        <!-- Caso o campo "data" venha com hora, usamos slice para pegar apenas a parte da data -->
+        <input type="date" class="form-control" id="data" name="data" value="{{ transacao.data|slice(0,10) }}" required>
+      </div>
+      
+      <button type="submit" class="btn btn-primary">Atualizar Transação</button>
+    </form>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+ 
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Adicionar Transação</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container mt-5">
+    <h2 class="mb-4">Adicionar Transação</h2>
+    <form action="{{ url_for('adicionar_transacao') }}" method="post">
+      <!-- Tipo de Transação -->
+      <div class="mb-3">
+        <label for="tipo" class="form-label">Tipo de Transação</label>
+        <select class="form-select" id="tipo" name="tipo" required>
+          <option value="" disabled selected>Selecione...</option>
+          <option value="gasto">Gasto</option>
+          <option value="renda">Renda</option>
+          <!-- Outras opções, se necessário -->
+        </select>
+      </div>
+      
+      <!-- Nome -->
+      <div class="mb-3">
+        <label for="nome" class="form-label">Nome</label>
+        <input type="text" class="form-control" id="nome" name="nome" required>
+      </div>
+      
+      <!-- Valor -->
+      <div class="mb-3">
+        <label for="valor" class="form-label">Valor</label>
+        <input type="number" step="0.01" class="form-control" id="valor" name="valor" required>
+      </div>
+      
+      <!-- Período -->
+      <div class="mb-3">
+        <label for="periodo" class="form-label">Período</label>
+        <select class="form-select" id="periodo" name="periodo" required>
+          <option value="" disabled selected>Selecione...</option>
+          <option value="diario">Diário</option>
+          <option value="semanal">Semanal</option>
+          <option value="mensal">Mensal</option>
+          <option value="anual">Anual</option>
+        </select>
+      </div>
+      
+      <!-- Categoria -->
+      <div class="mb-3">
+        <label for="categoria" class="form-label">Categoria</label>
+        <select class="form-select" id="categoria" name="categoria" required>
+          <option value="" disabled selected>Selecione...</option>
+          <option value="necessidades">Necessidades</option>
+          <option value="lazer">Lazer</option>
+          <option value="investimento">Investimento</option>
+          <option value="reserva"> Reserva </option>
+          <option value="causas_sociais">Causa Social</option>
+          <!-- Outras categorias se necessário -->
+        </select>
+      </div>
+      
+      <!-- Data -->
+      <div class="mb-3">
+        <label for="data" class="form-label">Data</label>
+        <input type="date" class="form-control" id="data" name="data" required>
+      </div>
+      
+      <button type="submit" class="btn btn-primary">Adicionar Transação</button>
+    </form>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

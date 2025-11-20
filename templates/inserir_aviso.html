@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inserir Aviso - Contas a Pagar/Receber</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-light">
+  <!-- Barra de Navegação -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="/dashboard">
+        <i class="fa-solid fa-piggy-bank me-2"></i> Controle Financeiro
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link text-white" href="/dashboard">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="/contas">Contas</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="/notificacoes">Notificações</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- Conteúdo Principal -->
+  <div class="container py-5">
+    <h1 class="mb-4">Inserir Aviso</h1>
+      <!-- Botão Voltar -->
+      <a href="javascript:history.back()" class="btn-voltar mb-3"> ⬅ </a>
+      
+      <form action="{{ url_for('inserir_aviso') }}" method="POST">
+      <div class="mb-3">
+        <label for="tipo" class="form-label">Tipo de Aviso</label>
+        <select class="form-select" id="tipo" name="tipo" required>
+          <option value="" disabled selected>Selecione...</option>
+          <option value="pagar">Conta a Pagar</option>
+          <option value="receber">Conta a Receber</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="nome" class="form-label">Nome</label>
+        <input type="text" class="form-control" id="nome" name="nome" placeholder="Ex: Aluguel, Salário, etc." required>
+      </div>
+      <div class="mb-3">
+        <label for="valor" class="form-label">Valor (R$)</label>
+        <input type="number" step="0.01" class="form-control" id="valor" name="valor" required>
+      </div>
+      <div class="mb-3">
+        <label for="data" class="form-label">Data de Vencimento</label>
+        <input type="date" class="form-control" id="data" name="data" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">Inserir Aviso</button>
+    </form>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

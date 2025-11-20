@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editar Metas Financeiras</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<!-- Barra de Navegação (opcional, adapte conforme seu layout) -->
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="/dashboard">
+      <i class="fa-solid fa-piggy-bank me-2"></i> Controle Financeiro
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link text-white" href="/dashboard">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="/transacoes">Transações</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>  
+<div class="container py-5">
+  <h1 class="text-center mb-4">Editar Metas Financeiras</h1>
+  
+  <!-- Orientações -->
+  <div class="alert alert-info">
+    <h5>Orientações para definir suas metas:</h5>
+  <!-- Orientações de como usar o dinheiro -->
+    <p><strong>Modelo 30/20/20/20/10:</strong> 30% para necessidades, 30% para desejos, 20% para reserva, 20% para investimento e 10% para dízimo ou causas sociais.
+    <p><strong>Modelo 40/30/20/10:</strong> 40% para necessidades, 30% para desejos, 20% para investimento e 10% para reserva ou causas sociais.</p>
+    <p><strong>Modelo 50/30/20/</strong> 50% para necessidades, 30% para desejos, 20% reserva </p>
+    <p><strong>Orientações de Investimento:</strong> Sempre priorize a reserva de emergência antes de investir em ativos mais arriscados. Considere investir em fundos de baixo custo, como os ETFs, ou em ações de empresas sólidas, além de buscar opções de renda fixa para segurança.</p>
+  </div>
+
+  <form action="/editar_metas" method="POST" id="metasForm">
+    <div class="mb-3">
+      <label for="investimento" class="form-label">Investimento (mínimo 10%)</label>
+      <input type="number" class="form-control" id="investimento" name="investimento" step="0.01" value="{{ configuracoes['investimento'] }}" required>
+    </div>
+    <div class="mb-3">
+      <label for="reserva" class="form-label">Reserva (mínimo 10%)</label>
+      <input type="number" class="form-control" id="reserva" name="reserva" step="0.01" value="{{ configuracoes['reserva'] }}" required>
+    </div>
+    <div class="mb-3">
+      <label for="causas_sociais" class="form-label">Causas Sociais (mínimo 10%)</label>
+      <input type="number" class="form-control" id="causas_sociais" name="causas_sociais" step="0.01" value="{{ configuracoes['causas_sociais'] }}" required>
+    </div>
+    <div class="mb-3">
+      <label for="lazer" class="form-label">Lazer (mínimo 10%)</label>
+      <input type="number" class="form-control" id="lazer" name="lazer" step="0.01" value="{{ configuracoes['lazer'] }}" required>
+    </div>
+    <div class="mb-3">
+      <label for="necessidades" class="form-label">Necessidades (mínimo 50%)</label>
+      <input type="number" class="form-control" id="necessidades" name="necessidades" step="0.01" value="{{ configuracoes['necessidades'] }}" required>
+    </div>
+    <div class="mb-3">
+      <p class="total-percent" id="totalPercent">Total: 0%</p>
+      <p class="error-message" id="errorMessage"></p>
+    </div>
+    <button type="submit" class="btn btn-primary w-100" id="submitBtn">Salvar Metas</button>
+  </form>
+  
+</div>
+
+<script>
+  function updateMetas() {
+    // Obtém os valores dos inputs (convertendo para número ou 0)
+    var investimento = parseFloat(document.getElementById("investimento").value) || 0;
+    var reserva = parseFloat(document.getElementById("reserva").value) || 0;
+    var causas = parseFloat(document.getElementById("causas_sociais").value) || 0;
+    var lazer = parseFloat(document.getElementById("lazer").value) || 0;
+    var necessidades = parseFloat(document.getElementById("necessidades").value) || 0;
+    
+    // Soma dos valores
+    var total = investimento + reserva + causas + lazer + necessidades;
+    document.getElementById("totalPercent").innerText = "Total: " + total.toFixed(2) + "%";
+    
+    // Verifica se ultrapassa 100%
+    if (total > 100) {
+      document.getElementById("errorMessage").innerText = "A soma dos percentuais não pode ultrapassar 100%. Ajuste os valores.";
+      document.getElementById("submitBtn").disabled = true;
+    } else {
+      document.getElementById("errorMessage").innerText = "";
+      document.getElementById("submitBtn").disabled = false;
+    }
+  }
+  
+  // Atualiza a soma sempre que houver alteração
+  window.addEventListener("load", function() {
+    var inputs = document.querySelectorAll("input[type='number']");
+    inputs.forEach(function(input) {
+      input.addEventListener("input", updateMetas);
+    });
+    updateMetas();
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

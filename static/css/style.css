@@ -1,0 +1,264 @@
+/* Reset de margens e paddings */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Estilos Gerais */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f9;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Container Principal */
+.container {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+    margin: 20px auto;
+    max-width: 90%;
+    transition: all 0.3s ease;
+}
+
+.container:hover {
+    box-shadow: 0px 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+/* Títulos */
+h1, h2 {
+    color: #333;
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+
+h1 {
+    text-align: center;
+    font-size: 2.5rem;
+}
+
+h2 {
+    font-size: 1.8rem;
+}
+
+/* Navbar */
+.navbar {
+    background-color: #007bff;
+    padding: 15px 20px;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    color: #fff;
+    font-size: 1.8rem;
+    font-weight: bold;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.navbar-brand:hover {
+    color: #0056b3;
+}
+
+.navbar-nav {
+    display: flex;
+    gap: 10px;
+}
+
+.navbar-nav .nav-item {
+    list-style: none;
+}
+
+/* Botões no Navbar */
+.navbar-nav .nav-link {
+    background-color: #0056b3; /* Fundo azul escuro */
+    color: #fff; /* Texto branco */
+    font-size: 1rem;
+    font-weight: bold;
+    text-decoration: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    background-color: #003f8a; /* Fundo mais escuro no hover */
+    color: #e0e0e0; /* Texto mais claro no hover */
+}
+
+
+/* Botões */
+.btn {
+    display: inline-block;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    color: #fff;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+/* Listas */
+.list-group-item {
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    padding: 10px 15px;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: #e9ecef;
+    transform: translateY(-2px);
+}
+
+/* Footer */
+footer {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 0;
+    text-align: center;
+    font-size: 0.9rem;
+    margin-top: 20px;
+}
+
+/* Botão de Voltar */
+.btn-voltar {
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-decoration: none;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    z-index: 9999;
+}
+
+.btn-voltar:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    .navbar-nav {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+
+/* Botões no Navbar */
+.navbar-nav .nav-link {
+    background-color: #0056b3; /* Fundo azul escuro */
+    color: #fff; /* Texto branco */
+    font-size: 1rem;
+    font-weight: bold;
+    text-decoration: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    background-color: #003f8a; /* Fundo mais escuro no hover */
+    color: #e0e0e0; /* Texto mais claro no hover */
+}
+
+
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 15px;
+        font-size: 0.9rem;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    .btn {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+    }
+
+    footer {
+        font-size: 0.75rem;
+    }
+
+    /* Botões no Navbar */
+.navbar-nav .nav-link {
+    background-color: #0056b3; /* Fundo azul escuro */
+    color: #fff; /* Texto branco */
+    font-size: 1rem;
+    font-weight: bold;
+    text-decoration: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    background-color: #003f8a; /* Fundo mais escuro no hover */
+    color: #e0e0e0; /* Texto mais claro no hover */
+}
+
+
+}
+
+/* # Este código é propriedade de Arnaldo Rocha Filho
+   # Direitos Reservados © 2024
+*/
+
