@@ -424,7 +424,7 @@ def adicionar_transacao():
         valor = request.form.get('valor')
         data = request.form.get('data')
 
-        # Validação comum
+        # Campos obrigatórios
         if not tipo or not nome or not valor or not data:
             return "Erro: campos obrigatórios faltando", 400
 
@@ -433,21 +433,22 @@ def adicionar_transacao():
         except:
             return "Erro: valor inválido", 400
 
-        # Regras especiais para Renda
+        # Regras para RENDA
         if tipo == 'renda':
-            periodo = None
-            categoria = 'renda'
+            periodo = ""              # 🔥 evita erro do banco (NOT NULL)
+            categoria = request.form.get('categoria') or "renda"
 
-        # Regras para Gasto
+        # Regras para GASTO
         else:
             periodo = request.form.get('periodo')
             categoria = request.form.get('categoria')
 
             if not periodo:
-                return "Erro: período obrigatório para gastos", 400
+                return "Erro: período é obrigatório para gastos", 400
             if not categoria:
-                return "Erro: categoria obrigatória para gastos", 400
+                return "Erro: categoria é obrigatória para gastos", 400
 
+        # Inserção no banco
         conn = conectar_bd()
         cursor = conn.cursor()
 
@@ -463,7 +464,6 @@ def adicionar_transacao():
         return redirect(url_for('transacoes_view'))
 
     return render_template('adicionar_transacao.html')
-
 
 
 @app.route('/editar_transacao/<int:id>', methods=['GET', 'POST'])
