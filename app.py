@@ -253,16 +253,41 @@ def dashboard():
         if conn is None:
             flash("Erro ao conectar ao banco de dados", "danger")
             return redirect(url_for('index'))
+      
         cursor = conn.cursor()
         # Filtra transações do mês atual para o usuário autenticado
-        cursor.execute("SELECT * FROM Transacoes WHERE usuario_id = ? AND periodo = 'mensal' AND data BETWEEN ? AND ? ORDER BY data DESC", (session['user_id'], data_inicio, data_fim))
+      
+        cursor.execute("""
+            SELECT * FROM Transacoes 
+            WHERE usuario_id = ? 
+            AND data BETWEEN ? AND ?
+            ORDER BY data DESC
+        """, (session['user_id'], data_inicio, data_fim))
+
         transacoes = cursor.fetchall()
+
         cursor.execute("SELECT * FROM Configuracoes LIMIT 1")
         configuracoes = cursor.fetchone()
-        cursor.execute("SELECT SUM(valor) FROM Transacoes WHERE usuario_id = ? AND LOWER(tipo) = 'renda' AND periodo = 'mensal' AND data BETWEEN ? AND ?", (session['user_id'], data_inicio, data_fim))
+
+        # Total renda e total gasto
+        cursor.execute("""
+            SELECT SUM(valor) 
+            FROM Transacoes 
+            WHERE usuario_id = ? 
+            AND LOWER(tipo) = 'renda'
+            AND data BETWEEN ? AND ?
+        """, (session['user_id'], data_inicio, data_fim))
         total_rendas = cursor.fetchone()[0] or 0
-        cursor.execute("SELECT SUM(valor) FROM Transacoes WHERE usuario_id = ? AND LOWER(tipo) = 'gasto' AND periodo = 'mensal' AND data BETWEEN ? AND ?", (session['user_id'], data_inicio, data_fim))
+      
+        cursor.execute("""
+            SELECT SUM(valor) 
+            FROM Transacoes 
+            WHERE usuario_id = ? 
+            AND LOWER(tipo) = 'gasto'
+            AND data BETWEEN ? AND ?
+        """, (session['user_id'], data_inicio, data_fim))
         total_gastos = cursor.fetchone()[0] or 0
+
         saldo = round(total_rendas - total_gastos, 2)
         alerta_saldo = "Seu saldo está negativo. Recomenda-se aumentar a renda ou reduzir os gastos." if saldo < 0 else ""
         metas = {
@@ -282,8 +307,14 @@ def dashboard():
         categorias = ['necessidades', 'lazer', 'causas_sociais', 'reserva', 'investimento']
         gastos = {}
         for cat in categorias:
-            cursor.execute("SELECT SUM(valor) FROM Transacoes WHERE usuario_id = ? AND LOWER(categoria) = ? AND LOWER(tipo) = 'gasto' AND periodo = 'mensal' AND data BETWEEN ? AND ?",
-                           (session['user_id'], cat.lower(), data_inicio, data_fim))
+            cursor.execute("""
+                SELECT SUM(valor) 
+                FROM Transacoes 
+                WHERE usuario_id = ?
+                AND LOWER(tipo) = 'gasto'
+                AND categoria = ?
+                AND data BETWEEN ? AND ?
+            """, (session['user_id'], cat.lower(), data_inicio, data_fim))
             gastos[cat] = cursor.fetchone()[0] or 0
         comparacao = {cat: {
                 "meta": metas[cat],
@@ -383,59 +414,108 @@ def notificar_transacoes():
         for usuario_id, nome, valor, categoria in transacoes:
             print(f"Usuário {usuario_id}: {nome} - {categoria} - R$ {valor:.2f}")
 
+
 @app.route('/adicionar_transacao', methods=['GET', 'POST'])
 def adicionar_transacao():
     if request.method == 'POST':
-        tipo = request.form['tipo'].strip().lower()
-        nome = request.form['nome']
-        valor = float(request.form['valor'])
-        periodo = request.form['periodo']
-        data = request.form['data']
-        if tipo == 'investimento':
-            tipo = 'gasto'
-        categoria = request.form['categoria'] if tipo == 'gasto' else 'necessidades'
+
+        tipo = request.form.get('tipo', '').strip().lower()
+        nome = request.form.get('nome')
+        valor = request.form.get('valor')
+        data = request.form.get('data')
+
+        # Validação comum
+        if not tipo or not nome or not valor or not data:
+            return "Erro: campos obrigatórios faltando", 400
+
+        try:
+            valor = float(valor)
+        except:
+            return "Erro: valor inválido", 400
+
+        # Regras especiais para Renda
+        if tipo == 'renda':
+            periodo = None
+            categoria = 'renda'
+
+        # Regras para Gasto
+        else:
+            periodo = request.form.get('periodo')
+            categoria = request.form.get('categoria')
+
+            if not periodo:
+                return "Erro: período obrigatório para gastos", 400
+            if not categoria:
+                return "Erro: categoria obrigatória para gastos", 400
+
         conn = conectar_bd()
-        if conn is None:
-            flash("Erro ao conectar ao banco de dados", "danger")
-            return redirect(url_for('index'))
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO Transacoes (usuario_id, tipo, nome, valor, periodo, categoria, data) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                       (session['user_id'], tipo, nome, valor, periodo, categoria, data))
+
+        cursor.execute("""
+            INSERT INTO Transacoes (usuario_id, tipo, nome, valor, periodo, categoria, data)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (session['user_id'], tipo, nome, valor, periodo, categoria, data))
+
         conn.commit()
-        if data == datetime.now().strftime('%Y-%m-%d'):
-            notificar_transacoes()
         conn.close()
+
         flash("Transação adicionada com sucesso!", "success")
         return redirect(url_for('transacoes_view'))
+
     return render_template('adicionar_transacao.html')
+
+
 
 @app.route('/editar_transacao/<int:id>', methods=['GET', 'POST'])
 def editar_transacao(id):
     conn = conectar_bd()
-    if conn is None:
-        flash("Erro ao conectar ao banco de dados", "danger")
-        return redirect(url_for('index'))
     cursor = conn.cursor()
+
     if request.method == 'POST':
-        tipo = request.form['tipo'].strip().lower()
-        nome = request.form['nome']
-        valor = float(request.form['valor'])
-        periodo = request.form['periodo']
-        data = request.form['data']
-        if tipo == 'investimento':
-            tipo = 'gasto'
-        categoria = request.form['categoria'] if tipo == 'gasto' else 'necessidades'
-        cursor.execute("UPDATE Transacoes SET tipo = ?, nome = ?, valor = ?, periodo = ?, categoria = ?, data = ? WHERE id = ? AND usuario_id = ?",
-                       (tipo, nome, valor, periodo, categoria, data, id, session['user_id']))
+
+        tipo = request.form.get('tipo', '').strip().lower()
+        nome = request.form.get('nome')
+        valor = request.form.get('valor')
+        data = request.form.get('data')
+
+        if not tipo or not nome or not valor or not data:
+            return "Erro: campos obrigatórios faltando", 400
+
+        try:
+            valor = float(valor)
+        except:
+            return "Erro: valor inválido", 400
+
+        # Renda → sem período e sem categoria
+        if tipo == 'renda':
+            periodo = None
+            categoria = 'renda'
+
+        else:
+            periodo = request.form.get('periodo')
+            categoria = request.form.get('categoria')
+
+            if not periodo:
+                return "Erro: período obrigatório para gastos", 400
+            if not categoria:
+                return "Erro: categoria obrigatória para gastos", 400
+
+        cursor.execute("""
+            UPDATE Transacoes
+            SET tipo = ?, nome = ?, valor = ?, periodo = ?, categoria = ?, data = ?
+            WHERE id = ? AND usuario_id = ?
+        """, (tipo, nome, valor, periodo, categoria, data, id, session['user_id']))
+
         conn.commit()
-        if data == datetime.now().strftime('%Y-%m-%d'):
-            notificar_transacoes()
         conn.close()
+
         flash("Transação atualizada com sucesso!", "success")
         return redirect(url_for('transacoes_view'))
+
     cursor.execute("SELECT * FROM Transacoes WHERE id = ? AND usuario_id = ?", (id, session['user_id']))
     transacao = cursor.fetchone()
     conn.close()
+
     return render_template('editar_transacao.html', transacao=transacao)
 
 @app.route('/excluir_transacao/<int:id>', methods=['GET'])
@@ -727,8 +807,16 @@ def calendario():
     categorias = ["necessidades", "lazer", "causas_sociais", "reserva", "investimento"]
 
     gastos = {cat: 0 for cat in categorias}
+
     for t in transacoes:
+
+        # Ignorar rendas no cálculo de gastos
+        if t["tipo"].lower() != "gasto":
+            continue
+
         cat = t["categoria"]
+
+        # Garantir que só categorias válidas sejam contadas
         if cat in gastos:
             gastos[cat] += t["valor"]
 

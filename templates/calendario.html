@@ -45,141 +45,110 @@
         </div>
       </div>
     </form>
-<!-- FILTROS DE PERÍODO -->
-<div class="card shadow-sm mb-4">
-  <div class="card-header bg-primary text-white">
-    <h2 class="h6 mb-0">Selecionar Período</h2>
-  </div>
-  <div class="card-body">
 
-    <!-- BOTÕES DE TIPO -->
-    <div class="btn-group w-100 mb-3">
-      <a href="?tipo=diario" class="btn btn-outline-primary {% if tipo == 'diario' %}active{% endif %}">
-        Diário
-      </a>
-      <a href="?tipo=semanal" class="btn btn-outline-primary {% if tipo == 'semanal' %}active{% endif %}">
-        Semanal
-      </a>
-      <a href="?tipo=mensal" class="btn btn-outline-primary {% if tipo == 'mensal' %}active{% endif %}">
-        Mensal
-      </a>
-      <a href="?tipo=anual" class="btn btn-outline-primary {% if tipo == 'anual' %}active{% endif %}">
-        Anual
-      </a>
-      <a href="?tipo=intervalo" class="btn btn-outline-primary {% if tipo == 'intervalo' %}active{% endif %}">
-        Intervalo
-      </a>
+    <!-- FILTROS DE PERÍODO -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-primary text-white">
+        <h2 class="h6 mb-0">Selecionar Período</h2>
+      </div>
+      <div class="card-body">
+
+        <div class="btn-group w-100 mb-3">
+          <a href="?tipo=diario"    class="btn btn-outline-primary {% if tipo == 'diario' %}active{% endif %}">Diário</a>
+          <a href="?tipo=semanal"   class="btn btn-outline-primary {% if tipo == 'semanal' %}active{% endif %}">Semanal</a>
+          <a href="?tipo=mensal"    class="btn btn-outline-primary {% if tipo == 'mensal' %}active{% endif %}">Mensal</a>
+          <a href="?tipo=anual"     class="btn btn-outline-primary {% if tipo == 'anual' %}active{% endif %}">Anual</a>
+          <a href="?tipo=intervalo" class="btn btn-outline-primary {% if tipo == 'intervalo' %}active{% endif %}">Intervalo</a>
+        </div>
+
+        <!-- Formulário dinâmico por tipo -->
+        {% if tipo == "diario" %}
+        <form method="get" class="row g-3">
+          <input type="hidden" name="tipo" value="diario">
+          <div class="col-md-6">
+            <label class="form-label">Escolha o dia</label>
+            <input type="date" name="dia" class="form-control" required>
+          </div>
+          <div class="col-md-6 align-self-end">
+            <button class="btn btn-primary w-100">Aplicar</button>
+          </div>
+        </form>
+        {% endif %}
+
+        {% if tipo == "semanal" %}
+        <form method="get" class="row g-3">
+          <input type="hidden" name="tipo" value="semanal">
+          <div class="col-md-6">
+            <label class="form-label">Semana</label>
+            <input type="week" name="semana" class="form-control" required>
+          </div>
+          <div class="col-md-6 align-self-end">
+            <button class="btn btn-primary w-100">Aplicar</button>
+          </div>
+        </form>
+        {% endif %}
+
+        {% if tipo == "mensal" %}
+        <form method="get" class="row g-3">
+          <input type="hidden" name="tipo" value="mensal">
+          <div class="col-md-6">
+            <label class="form-label">Mês</label>
+            <input type="month" name="mes" class="form-control" required>
+          </div>
+          <div class="col-md-6 align-self-end">
+            <button class="btn btn-primary w-100">Aplicar</button>
+          </div>
+        </form>
+        {% endif %}
+
+        {% if tipo == "anual" %}
+        <form method="get" class="row g-3">
+          <input type="hidden" name="tipo" value="anual">
+          <div class="col-md-6">
+            <label class="form-label">Ano</label>
+            <input type="number" min="2000" max="2100" name="ano" class="form-control" placeholder="2025" required>
+          </div>
+          <div class="col-md-6 align-self-end">
+            <button class="btn btn-primary w-100">Aplicar</button>
+          </div>
+        </form>
+        {% endif %}
+
+        {% if tipo == "intervalo" %}
+        <form method="get" class="row g-3">
+          <input type="hidden" name="tipo" value="intervalo">
+          <div class="col-md-6">
+            <label class="form-label">Início</label>
+            <input type="date" name="inicio" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Fim</label>
+            <input type="date" name="fim" class="form-control" required>
+          </div>
+          <div class="col-12">
+            <button class="btn btn-primary w-100">Aplicar</button>
+          </div>
+        </form>
+        {% endif %}
+
+      </div>
     </div>
-
-    <!-- FORMULÁRIOS DE CADA TIPO -->
-
-    <!-- Diário -->
-    {% if tipo == "diario" %}
-    <form method="get" class="row g-3">
-      <input type="hidden" name="tipo" value="diario">
-      <div class="col-md-6">
-        <label class="form-label">Escolha o dia</label>
-        <input type="date" name="dia" class="form-control" required>
-      </div>
-      <div class="col-md-6 align-self-end">
-        <button class="btn btn-primary w-100">Aplicar</button>
-      </div>
-    </form>
-    {% endif %}
-
-    <!-- Semanal -->
-    {% if tipo == "semanal" %}
-    <form method="get" class="row g-3">
-      <input type="hidden" name="tipo" value="semanal">
-      <div class="col-md-6">
-        <label class="form-label">Semana</label>
-        <input type="week" name="semana" class="form-control" required>
-      </div>
-      <div class="col-md-6 align-self-end">
-        <button class="btn btn-primary w-100">Aplicar</button>
-      </div>
-    </form>
-    {% endif %}
-
-    <!-- Mensal -->
-    {% if tipo == "mensal" %}
-    <form method="get" class="row g-3">
-      <input type="hidden" name="tipo" value="mensal">
-      <div class="col-md-6">
-        <label class="form-label">Mês</label>
-        <input type="month" name="mes" class="form-control" required>
-      </div>
-      <div class="col-md-6 align-self-end">
-        <button class="btn btn-primary w-100">Aplicar</button>
-      </div>
-    </form>
-    {% endif %}
-
-    <!-- Anual -->
-    {% if tipo == "anual" %}
-    <form method="get" class="row g-3">
-      <input type="hidden" name="tipo" value="anual">
-      <div class="col-md-6">
-        <label class="form-label">Ano</label>
-        <input type="number" min="2000" max="2100" name="ano" class="form-control" placeholder="2025" required>
-      </div>
-      <div class="col-md-6 align-self-end">
-        <button class="btn btn-primary w-100">Aplicar</button>
-      </div>
-    </form>
-    {% endif %}
-
-    <!-- Intervalo de Datas -->
-    {% if tipo == "intervalo" %}
-    <form method="get" class="row g-3">
-      <input type="hidden" name="tipo" value="intervalo">
-      <div class="col-md-6">
-        <label class="form-label">Início</label>
-        <input type="date" name="inicio" class="form-control" required>
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Fim</label>
-        <input type="date" name="fim" class="form-control" required>
-      </div>
-      <div class="col-12">
-        <button class="btn btn-primary w-100">Aplicar</button>
-      </div>
-    </form>
-    {% endif %}
-
-  </div>
-</div>
 
     {% if filtro_ativo %}
 
     <!-- RESUMO -->
     <div class="row mb-4">
-      <div class="col-md-4">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h6>Total Rendas</h6>
-            <h4 class="text-success">R$ {{ '%.2f'|format(total_rendas) }}</h4>
-          </div>
-        </div>
-      </div>
+      <div class="col-md-4"><div class="card shadow-sm"><div class="card-body">
+        <h6>Total Rendas</h6><h4 class="text-success">R$ {{ '%.2f'|format(total_rendas) }}</h4>
+      </div></div></div>
 
-      <div class="col-md-4">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h6>Total Gastos</h6>
-            <h4 class="text-danger">R$ {{ '%.2f'|format(total_gastos) }}</h4>
-          </div>
-        </div>
-      </div>
+      <div class="col-md-4"><div class="card shadow-sm"><div class="card-body">
+        <h6>Total Gastos</h6><h4 class="text-danger">R$ {{ '%.2f'|format(total_gastos) }}</h4>
+      </div></div></div>
 
-      <div class="col-md-4">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h6>Saldo</h6>
-            <h4 class="text-primary">R$ {{ '%.2f'|format(saldo) }}</h4>
-          </div>
-        </div>
-      </div>
+      <div class="col-md-4"><div class="card shadow-sm"><div class="card-body">
+        <h6>Saldo</h6><h4 class="text-primary">R$ {{ '%.2f'|format(saldo) }}</h4>
+      </div></div></div>
     </div>
 
     <!-- TABELA -->
@@ -189,12 +158,7 @@
         <div class="table-responsive">
           <table class="table table-striped">
             <thead>
-              <tr>
-                <th>Categoria</th>
-                <th>Meta</th>
-                <th>Gasto</th>
-                <th>Status</th>
-              </tr>
+              <tr><th>Categoria</th><th>Meta</th><th>Gasto</th><th>Status</th></tr>
             </thead>
             <tbody>
               {% for cat, d in comparacao.items() %}
@@ -217,10 +181,18 @@
       </div>
     </div>
 
-    <!-- GRAFICO -->
-    <div class="card shadow-sm">
-      <div class="card-header bg-primary text-white">Gráfico do Período</div>
+    <!-- SELETOR DE GRÁFICO -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-header bg-primary text-white">
+        <span>Gráfico do Período</span>
+      </div>
       <div class="card-body">
+       <div class="btn-group mb-3">
+        <button class="btn btn-outline-primary" id="btnBar">Barra</button>
+        <button class="btn btn-outline-primary" id="btnPie">Pizza</button>
+        <button class="btn btn-outline-primary" id="btnPareto">Pareto</button>
+       </div>
+
         <canvas id="metasChart"></canvas>
       </div>
     </div>
@@ -228,31 +200,154 @@
     {% endif %}
   </div>
 
-  <script>
-    {% if filtro_ativo %}
-    const data = JSON.parse('{{ grafico_data | safe }}');
+  <!-- SCRIPTS DE GRÁFICO -->
+<script>
+{% if filtro_ativo %}
 
-    new Chart(document.getElementById("metasChart"), {
-      type: "bar",
-      data: {
-        labels: data.categorias,
-        datasets: [
-          {
-            label: "Gasto",
-            data: data.gastos,
-            backgroundColor: data.cores
-          },
-          {
-            label: "Meta",
-            data: data.metas,
-            backgroundColor: data.cores.map(c => c + "55")
-          }
-        ]
-      },
-      options: { responsive: true }
+const data = JSON.parse('{{ grafico_data | safe }}');
+
+let chart = null;
+const ctx = document.getElementById("metasChart");
+
+// ===============================
+// FUNÇÃO: gerar acumulado (%)
+// ===============================
+function gerarPareto(values) {
+    let total = values.reduce((a, b) => a + b, 0);
+    let acumulado = 0;
+    return values.map(v => {
+        acumulado += v;
+        return (acumulado / total) * 100;
     });
-    {% endif %}
-  </script>
+}
+
+// ===============================
+// FUNÇÃO PRINCIPAL DE CRIAR GRÁFICO
+// ===============================
+function criarGrafico(tipo) {
+    if (chart) chart.destroy();
+
+    // -------------------------------
+    // 1) GRÁFICO PARETO
+    // BARRA = Gastos
+    // LINHA = Metas acumuladas (%)
+    // -------------------------------
+    if (tipo === "pareto") {
+
+        const gastos = data.gastos;   // Barras
+        const metas = data.metas;     // Linha acumulada (%)
+
+        const acumulado = gerarPareto(metas);
+
+        chart = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: data.categorias,
+                datasets: [
+                    {
+                        label: "Gastos",
+                        data: gastos,
+                        backgroundColor: data.cores
+                    },
+                    {
+                        label: "Metas Acumuladas (%)",
+                        data: acumulado,
+                        type: "line",
+                        yAxisID: "percent",
+                        borderWidth: 3,
+                        tension: 0.4,
+
+                        // 🔥 bolinhas coloridas pela categoria
+                        pointRadius: 7,
+                        pointBackgroundColor: data.cores,
+                        pointBorderColor: "#000",
+                        pointBorderWidth: 1,
+
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true },
+                    percent: {
+                        beginAtZero: true,
+                        position: "right",
+                        max: 100,
+                        ticks: {
+                            callback: v => v + "%"
+                        }
+                    }
+                }
+            }
+        });
+
+    // -------------------------------
+    // 2) GRÁFICO PIZZA
+    // Gasto + Meta juntos
+    // -------------------------------
+    } else if (tipo === "pie") {
+
+        chart = new Chart(ctx, {
+            type: "pie",
+            data: {
+                labels: data.categorias,
+                datasets: [
+                    {
+                        label: "Gastos",
+                        data: data.gastos,
+                        backgroundColor: data.cores
+                    },
+                    {
+                        label: "Metas",
+                        data: data.metas,
+                        backgroundColor: data.cores.map(c => c + "88")
+                    }
+                ]
+            }
+        });
+
+    // -------------------------------
+    // 3) GRÁFICO DE BARRAS PADRÃO
+    // -------------------------------
+    } else {
+
+        chart = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: data.categorias,
+                datasets: [
+                    {
+                        label: "Gasto",
+                        data: data.gastos,
+                        backgroundColor: data.cores
+                    },
+                    {
+                        label: "Meta",
+                        data: data.metas,
+                        backgroundColor: data.cores.map(c => c + "55")
+                    }
+                ]
+            }
+        });
+    }
+}
+
+// ===============================
+// BOTÕES PARA TROCAR O GRÁFICO
+// ===============================
+document.getElementById("btnBar").onclick = () => criarGrafico("bar");
+document.getElementById("btnPie").onclick = () => criarGrafico("pie");
+document.getElementById("btnPareto").onclick = () => criarGrafico("pareto");
+
+// ===============================
+// GERA O PRIMEIRO GRÁFICO AO ABRIR
+// ===============================
+criarGrafico("bar");
+
+{% endif %}
+</script>
 
 </body>
 </html>
