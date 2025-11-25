@@ -69,7 +69,7 @@
       document.querySelectorAll('.filter-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
           const period = this.getAttribute('data-period');
-          window.location.href = '{{ url_for("calendario_view") }}' + (period ? '?periodo=' + period : '');
+          window.location.href = '{{ url_for("calendario") }}' + (period ? '?periodo=' + period : '');
         });
       });
       
