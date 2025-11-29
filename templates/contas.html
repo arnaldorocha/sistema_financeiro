@@ -3,9 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contas a Pagar / Devedores</title>
+  <title>Contas a Pagar / Receber</title>
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+
   <style>
     body { font-family: Arial, sans-serif; }
     .search-container { margin-bottom: 1rem; }
@@ -14,13 +17,13 @@
     .status-select { width: auto; min-width: 120px; }
   </style>
 </head>
+
 <body class="bg-light">
 
-  
-  <!-- NAVBAR -->
+  <!-- NAV PADRÃO DO DASHBOARD -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
     <div class="container">
-      <a class="navbar-brand d-flex align-items-center" href="/dashboard">
+      <a class="navbar-brand d-flex align-items-center" href="/">
         <i class="fa-solid fa-piggy-bank me-2"></i> Controle Financeiro
       </a>
 
@@ -38,14 +41,14 @@
           </li>
 
           <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('contas') }}">
+            <a class="nav-link text-white active fw-bold" href="{{ url_for('contas') }}">
               <i class="fa-solid fa-file-invoice-dollar"></i> Contas
             </a>
           </li>
 
           <li class="nav-item mt-2 mt-lg-0">
             <a href="/transacoes" class="btn btn-light text-primary fw-bold w-100">
-              <i class="fa-solid fa-list"></i> Transações
+              <i class="fa-solid fa-plus"></i> Transações
             </a>
           </li>
 
@@ -53,12 +56,15 @@
       </div>
     </div>
   </nav>
-
+  <!-- FIM NAV -->
 
   <div class="container py-5">
-    <h1 class="mb-4">Contas a Pagar / Devedores</h1>
 
-    <!-- Filtros -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="text-primary">Contas a Pagar / Devedores</h1>
+    </div>
+
+    <!-- FILTROS -->
     <div class="mb-3">
       <label class="form-label">Filtrar por Período:</label>
       <div class="btn-group" role="group">
@@ -70,19 +76,19 @@
       </div>
     </div>
 
-    <!-- Pesquisa -->
+    <!-- PESQUISA -->
     <div class="mb-3 search-container">
       <input type="text" id="searchInputContas" class="form-control" placeholder="Pesquisar por nome ou tipo...">
     </div>
 
-    <!-- Botão de Novo Aviso -->
+    <!-- Botão inserir aviso -->
     <div class="mb-3">
       <a href="/inserir_aviso" class="btn btn-success">
         <i class="fa-solid fa-plus"></i> Inserir Aviso
       </a>
     </div>
 
-    <!-- Tabela -->
+    <!-- TABELA -->
     <div class="table-responsive">
       <table class="table table-hover align-middle shadow-sm bg-white rounded" id="contasTable">
         <thead class="table-primary">
@@ -93,8 +99,10 @@
             <th>Valor</th>
             <th>Data</th>
             <th>Status</th>
+            <th>Ações</th>
           </tr>
         </thead>
+
         <tbody>
           {% for a in avisos %}
           <tr class="{% if a.status == 'Pago' %}table-success{% elif a.status == 'Pendente' %}table-warning{% endif %}">
@@ -104,36 +112,52 @@
             <td>R$ {{ a.valor }}</td>
             <td>
               {{ a.data }}
-              {% set data_hoje = hoje %}
-              {% if a.data < data_hoje %}
+              {% if a.data < hoje %}
                 <i class="fas fa-exclamation-triangle icon-alert" title="Atrasado"></i>
-              {% elif a.data == data_hoje %}
+              {% elif a.data == hoje %}
                 <i class="fas fa-bell icon-today" title="Vence hoje"></i>
               {% endif %}
             </td>
+
             <td>
               <select name="status_{{ a.id }}" class="form-select form-select-sm status-select">
                 <option value="Pendente" {% if a.status == 'Pendente' %}selected{% endif %}>Pendente</option>
                 <option value="Pago" {% if a.status == 'Pago' %}selected{% endif %}>Pago</option>
               </select>
             </td>
+
+            <td>
+              <a href="{{ url_for('excluir_aviso', id=a.id) }}" 
+                 class="btn btn-sm btn-danger"
+                 onclick="return confirm('Tem certeza que deseja excluir este aviso?');">
+                <i class="fas fa-trash"></i>
+              </a>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
+
       </table>
     </div>
 
-    <!-- Botão para salvar as alterações -->
+    <!-- Botão salvar status -->
     <div class="mb-3">
       <button type="button" class="btn btn-primary" id="salvarStatusBtn">
         <i class="fa-solid fa-save"></i> Salvar Status
       </button>
     </div>
+
   </div>
 
+  <!-- FOOTER PADRÃO -->
+  <footer class="bg-primary text-white text-center py-3 mt-4">
+    <p class="mb-0">&copy; 2025 Arnaldo Rocha Filho. Todos os direitos reservados.</p>
+  </footer>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
   <script>
-    // Filtro de busca
+    // Filtro
     const searchInputContas = document.getElementById('searchInputContas');
     searchInputContas.addEventListener('keyup', function() {
       const filter = this.value.toLowerCase();
@@ -145,40 +169,34 @@
       });
     });
 
-    // Enviar as alterações de status
+    // Atualizar em lote
     document.getElementById('salvarStatusBtn').addEventListener('click', function() {
       const statusUpdates = [];
-      
-      // Coleta todos os status alterados
       const selects = document.querySelectorAll('.status-select');
+
       selects.forEach(select => {
-        const id = select.name.split('_')[1]; // Extrai o ID da conta
-        const status = select.value; // Obtém o novo status
+        const id = select.name.split('_')[1];
+        const status = select.value;
         statusUpdates.push({ id, status });
       });
-      
-      // Envia para o servidor
+
       fetch('/atualizar_status_em_lote', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(statusUpdates), // Envia os status alterados
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(statusUpdates),
       })
       .then(response => response.json())
       .then(data => {
         if (data.success) {
           alert('Status atualizados com sucesso!');
-          window.location.reload(); // Atualiza a página para refletir as mudanças
+          window.location.reload();
         } else {
           alert('Erro ao salvar os status!');
         }
       })
-      .catch(error => {
-        console.error('Erro:', error);
-        alert('Erro ao salvar os status!');
-      });
+      .catch(() => alert('Erro ao salvar os status!'));
     });
   </script>
+
 </body>
 </html>

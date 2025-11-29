@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, date
 import sqlite3
 import json
 from dotenv import load_dotenv
+import psycopg2
+import psycopg2.extras
 
 
 
@@ -531,6 +533,7 @@ def excluir_transacao(id):
     flash("Transação excluída com sucesso!", "success")
     return redirect(url_for('transacoes_view'))
 
+
 # =====================================================
 # Rotas para Avisos (Contas a Pagar / Receber)
 # =====================================================
@@ -547,17 +550,90 @@ def inserir_aviso():
         valor = float(request.form['valor'])
         data = request.form['data']
         conn = conectar_bd()
-        if conn is None:
-            flash("Erro ao conectar ao banco de dados", "danger")
-            return redirect(url_for('index'))
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO Avisos (usuario_id, tipo, nome, valor, data) VALUES (?, ?, ?, ?, ?)",
-                       (usuario_id, tipo, nome, valor, data))
+        cursor.execute("INSERT INTO Avisos (usuario_id, tipo, nome, valor, data, status) VALUES (?, ?, ?, ?, ?, ?)",
+                       (usuario_id, tipo, nome, valor, data, 'Pendente'))
         conn.commit()
         conn.close()
         flash("Aviso inserido com sucesso!", "success")
         return redirect(url_for('contas'))
     return render_template('inserir_aviso.html')
+
+
+@app.route('/contas')
+def contas():
+    if 'user_id' not in session:
+        flash("Você não está autenticado.", "error")
+        return redirect(url_for('index'))
+    periodo = request.args.get('periodo')
+    pesquisa = request.args.get('pesquisa', '').lower()
+    conn = conectar_bd()
+    cursor = conn.cursor()
+    if periodo:
+        cursor.execute("SELECT * FROM Avisos WHERE usuario_id = ? AND data LIKE ? ORDER BY data ASC",
+                       (session['user_id'], f'%{periodo}%'))
+    else:
+        cursor.execute("SELECT * FROM Avisos WHERE usuario_id = ? ORDER BY data ASC", (session['user_id'],))
+    avisos = cursor.fetchall()
+    conn.close()
+    if pesquisa:
+        avisos = [a for a in avisos if pesquisa in a['nome'].lower() or pesquisa in a['tipo'].lower()]
+    hoje = date.today().isoformat()
+    return render_template('contas.html', avisos=avisos, hoje=hoje)
+
+
+@app.route('/excluir_aviso/<int:id>')
+def excluir_aviso(id):
+    if 'user_id' not in session:
+        return redirect(url_for('index'))
+
+    conn = conectar_bd()
+    cur = conn.cursor()
+
+    cur.execute("DELETE FROM Avisos WHERE id = ? AND usuario_id = ?", (id, session['user_id']))
+
+    conn.commit()
+    conn.close()
+
+    flash("Aviso excluído!", "success")
+    return redirect(url_for('contas'))
+
+
+@app.route('/atualizar_status_em_lote', methods=['POST'])
+def atualizar_status_em_lote():
+    try:
+        status_updates = request.get_json()
+        conn = conectar_bd()
+        cursor = conn.cursor()
+
+        for update in status_updates:
+            id_ = update['id']
+            novo_status = update['status']
+
+            # Atualiza status do aviso
+            cursor.execute("UPDATE Avisos SET status = ? WHERE id = ?", (novo_status, id_))
+
+            # Se status for 'Pago', cria transação correspondente
+            if novo_status == 'Pago':
+                aviso = cursor.execute("SELECT * FROM Avisos WHERE id = ?", (id_,)).fetchone()
+
+                # Converte tipo do aviso para tipo de transação
+                tipo_transacao = 'renda' if aviso['tipo'] == 'receber' else 'gasto'
+                categoria = 'Aviso Pago'
+                periodo = aviso['data'] if tipo_transacao == 'gasto' else None
+
+                # Insere transação
+                cursor.execute(
+                    "INSERT INTO Transacoes (usuario_id, tipo, nome, valor, data, categoria, periodo) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (aviso['usuario_id'], tipo_transacao, aviso['nome'], aviso['valor'], aviso['data'], categoria, periodo)
+                )
+
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Status atualizados com sucesso!'})
+    
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
 
 # =====================================================
 # Rotas para Editar Metas
@@ -588,112 +664,26 @@ def editar_metas():
     return render_template('editar_metas.html', configuracoes=configuracoes)
 
 # =====================================================
-# Rotas para Contas (Exibição de Contas a Pagar/Receber)
-# =====================================================
-
-@app.route('/contas')
-def contas():
-    if 'user_id' not in session:
-        flash("Você não está autenticado.", "error")
-        return redirect(url_for('index'))
-    periodo = request.args.get('periodo')
-    pesquisa = request.args.get('pesquisa', '').lower()
-    conn = conectar_bd()
-    if conn is None:
-        flash("Erro ao conectar ao banco de dados", "danger")
-        return redirect(url_for('dashboard'))
-    cursor = conn.cursor()
-    if periodo:
-        cursor.execute("SELECT * FROM Avisos WHERE usuario_id = ? AND data LIKE ? ORDER BY data ASC", (session['user_id'], f'%{periodo}%'))
-    else:
-        cursor.execute("SELECT * FROM Avisos WHERE usuario_id = ? ORDER BY data ASC", (session['user_id'],))
-    avisos = cursor.fetchall()
-    conn.close()
-    if pesquisa:
-        avisos = [a for a in avisos if pesquisa in a['nome'].lower() or pesquisa in a['tipo'].lower()]
-    hoje = date.today().isoformat()  # 'YYYY-MM-DD'
-    return render_template('contas.html', avisos=avisos, hoje=hoje)
-@app.route('/atualizar_status', methods=['POST'])
-def atualizar_status():
-    id_ = request.form['id']
-    novo_status = request.form['status']
-    conn = conectar_bd()
-    cursor = conn.cursor()
-
-    # Atualiza o status do aviso
-    cursor.execute("UPDATE Avisos SET status = ? WHERE id = ?", (novo_status, id_))
-
-    # Se o status for 'Pago', cria uma nova transação
-    if novo_status == 'Pago':
-        # Recupera as informações do aviso
-        aviso = cursor.execute("SELECT * FROM Avisos WHERE id = ?", (id_,)).fetchone()
-
-        # Adiciona uma nova transação com as informações do aviso
-        cursor.execute(
-            "INSERT INTO Transacoes (usuario_id, tipo, nome, valor, data, categoria) VALUES (?, ?, ?, ?, ?, ?)",
-            (aviso['usuario_id'], aviso['tipo'], aviso['nome'], aviso['valor'], aviso['data'], 'Conta Paga')
-        )
-
-    # Commit para salvar as mudanças
-    conn.commit()
-    conn.close()
-
-    # Redireciona para a página de transações, onde a nova transação será exibida
-    return redirect(url_for('transacoes_view'))
-
-@app.route('/atualizar_status_em_lote', methods=['POST'])
-def atualizar_status_em_lote():
-    try:
-        # Receber os dados enviados em JSON
-        status_updates = request.get_json()
-
-        # Estabelecer a conexão com o banco de dados
-        conn = conectar_bd()
-        cursor = conn.cursor()
-
-        # Para cada atualização de status recebida, realiza a mudança no banco de dados
-        for update in status_updates:
-            id_ = update['id']
-            novo_status = update['status']
-
-            # Atualiza o status do aviso
-            cursor.execute("UPDATE Avisos SET status = ? WHERE id = ?", (novo_status, id_))
-
-            # Se o status for 'Pago', cria uma nova transação
-            if novo_status == 'Pago':
-                # Recupera as informações do aviso
-                aviso = cursor.execute("SELECT * FROM Avisos WHERE id = ?", (id_,)).fetchone()
-
-                # Adiciona uma nova transação com as informações do aviso
-                cursor.execute(
-                    "INSERT INTO Transacoes (usuario_id, tipo, nome, valor, data, categoria) VALUES (?, ?, ?, ?, ?, ?)",
-                    (aviso['usuario_id'], aviso['tipo'], aviso['nome'], aviso['valor'], aviso['data'], 'Conta Paga')
-                )
-
-        # Commit para salvar as mudanças no banco
-        conn.commit()
-        conn.close()
-
-        return jsonify({'success': True, 'message': 'Status atualizados com sucesso!'})
-    
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
-
-# =====================================================
 # Rotas para Calendário (Exibição de Eventos)
 # =====================================================
 
 @app.route("/calendario")
 def calendario():
-
     if "user_id" not in session:
         flash("Você não está autenticado.", "error")
         return redirect(url_for("index"))
 
-    # Tipo de filtro escolhido
-    tipo = request.args.get("tipo", "intervalo")
+    conn = conectar_bd()
+    conn.row_factory = sqlite3.Row  # Garante acesso via nomes de coluna
+    cursor = conn.cursor()
 
-    # Valores recebidos
+    # -------------------------------
+    # PARÂMETROS DO FILTRO
+    # -------------------------------
+    tipo = request.args.get("tipo", "intervalo")
+    categoria_filtro = request.args.get("categoria", "todas")
+
+    hoje = date.today()
     inicio = request.args.get("inicio")
     fim = request.args.get("fim")
     dia = request.args.get("dia")
@@ -701,125 +691,76 @@ def calendario():
     ano = request.args.get("ano")
     semana = request.args.get("semana")
 
-    today = date.today()
+    # -------------------------------
+    # INTERVALO SELECIONADO
+    # -------------------------------
+    dt_inicio = dt_fim = hoje
 
-    # ===============================
-    # 1 — INTERVALO LIVRE
-    # ===============================
     if tipo == "intervalo" and inicio and fim:
         dt_inicio = datetime.strptime(inicio, "%Y-%m-%d").date()
         dt_fim = datetime.strptime(fim, "%Y-%m-%d").date()
-
-    # ===============================
-    # 2 — DIÁRIO
-    # ===============================
     elif tipo == "diario":
-        if not dia:
-            dia = today.strftime("%Y-%m-%d")
-        dt_inicio = datetime.strptime(dia, "%Y-%m-%d").date()
-        dt_fim = dt_inicio
-
-    # ===============================
-    # 3 — SEMANAL
-    # ===============================
+        d = dia or hoje.strftime("%Y-%m-%d")
+        dt_inicio = dt_fim = datetime.strptime(d, "%Y-%m-%d").date()
     elif tipo == "semanal":
-        if not semana:
-            semana = today.strftime("%Y-W%W")  # semana ISO atual
-
-        ano_sem, semana_sem = semana.split("-W")
-        ano_sem = int(ano_sem)
-        semana_sem = int(semana_sem)
-
-        # Semana ISO começa na segunda
-        dt_inicio = datetime.fromisocalendar(ano_sem, semana_sem, 1).date()
-        dt_fim = datetime.fromisocalendar(ano_sem, semana_sem, 7).date()
-
-    # ===============================
-    # 4 — MENSAL
-    # ===============================
+        semana = semana or hoje.strftime("%Y-W%W")
+        ano_s, sem_s = semana.split("-W")
+        dt_inicio = datetime.fromisocalendar(int(ano_s), int(sem_s), 1).date()
+        dt_fim = datetime.fromisocalendar(int(ano_s), int(sem_s), 7).date()
     elif tipo == "mensal":
-        if not mes:
-            mes = today.strftime("%Y-%m")
-
-        ano_m, mes_m = mes.split("-")
-        ano_m = int(ano_m)
-        mes_m = int(mes_m)
-
+        mes = mes or hoje.strftime("%Y-%m")
+        ano_m, mes_m = map(int, mes.split("-"))
         dt_inicio = date(ano_m, mes_m, 1)
-
-        # Último dia do mês
-        if mes_m == 12:
-            dt_fim = date(ano_m, 12, 31)
-        else:
-            dt_fim = date(ano_m, mes_m + 1, 1) - timedelta(days=1)
-
-    # ===============================
-    # 5 — ANUAL
-    # ===============================
+        dt_fim = date(ano_m, mes_m + 1, 1) - timedelta(days=1) if mes_m < 12 else date(ano_m, 12, 31)
     elif tipo == "anual":
-        if not ano:
-            ano = today.year
-        else:
-            ano = int(ano)
-
+        ano = int(ano or hoje.year)
         dt_inicio = date(ano, 1, 1)
         dt_fim = date(ano, 12, 31)
 
-    else:
-        # nada selecionado → só exibir a tela
-        return render_template("calendario.html", filtro_ativo=False)
+    # -------------------------------
+    # BUSCAR TRANSACOES
+    # -------------------------------
+    query = """
+        SELECT tipo, valor, categoria, nome
+        FROM Transacoes
+        WHERE usuario_id = ?
+        AND DATE(data) BETWEEN ? AND ?
+    """
+    params = [session["user_id"], dt_inicio, dt_fim]
 
-    # ===========================================
-    #  Recuperar transações do intervalo
-    # ===========================================
-    conn = conectar_bd()
-    cursor = conn.cursor()
+    if categoria_filtro != "todas":
+        query += " AND categoria = ?"
+        params.append(categoria_filtro)
 
-    cursor.execute("""
-        SELECT tipo, valor, categoria 
-        FROM Transacoes 
-        WHERE usuario_id = ? AND DATE(data) BETWEEN ? AND ?
-    """, (session["user_id"], dt_inicio, dt_fim))
-
+    cursor.execute(query, params)
     transacoes = cursor.fetchall()
 
-    # ===============================
-    # Cálculo dos totais
-    # ===============================
     total_rendas = sum(t["valor"] for t in transacoes if t["tipo"] == "renda")
     total_gastos = sum(t["valor"] for t in transacoes if t["tipo"] == "gasto")
     saldo = total_rendas - total_gastos
 
-    # ===============================
-    # Categorias e metas
-    # ===============================
+    # -------------------------------
+    # METAS DO USUÁRIO
+    # -------------------------------
     cursor.execute("SELECT * FROM Configuracoes LIMIT 1")
-    config = cursor.fetchone()
-
-    metas = {
-        "necessidades": total_rendas * (config["necessidades"] / 100),
-        "lazer": total_rendas * (config["lazer"] / 100),
-        "causas_sociais": total_rendas * (config["causas_sociais"] / 100),
-        "reserva": total_rendas * (config["reserva"] / 100),
-        "investimento": total_rendas * (config["investimento"] / 100),
-    }
+    row = cursor.fetchone()
+    config = dict(row) if row else {}
 
     categorias = ["necessidades", "lazer", "causas_sociais", "reserva", "investimento"]
 
+    metas = {cat: total_rendas * (config.get(cat, 0)/100) for cat in categorias}
+
+    # -------------------------------
+    # SOMA REAL DE GASTOS POR CATEGORIA
+    # -------------------------------
     gastos = {cat: 0 for cat in categorias}
-
     for t in transacoes:
+        if t["tipo"] == "gasto" and t["categoria"] in gastos:
+            gastos[t["categoria"]] += t["valor"]
 
-        # Ignorar rendas no cálculo de gastos
-        if t["tipo"].lower() != "gasto":
-            continue
-
-        cat = t["categoria"]
-
-        # Garantir que só categorias válidas sejam contadas
-        if cat in gastos:
-            gastos[cat] += t["valor"]
-
+    # -------------------------------
+    # COMPARAÇÃO PARA GRÁFICO
+    # -------------------------------
     comparacao = {
         cat: {
             "meta": metas[cat],
@@ -829,14 +770,36 @@ def calendario():
         for cat in categorias
     }
 
+    # -------------------------------
+    # GRAFICO FINAL
+    # -------------------------------
     cores = ["#4e73df", "#1cc88a", "#36b9cc", "#f6c23e", "#e74a3b"]
-
     grafico_data = json.dumps({
         "categorias": [c.capitalize() for c in categorias],
         "gastos": [gastos[c] for c in categorias],
         "metas": [metas[c] for c in categorias],
         "cores": cores,
     })
+
+    # -------------------------------
+    # GRAFICO DE ITENS INDIVIDUAIS
+    # -------------------------------
+    itens_transacoes = transacoes  # já pegamos todas as transações no filtro acima
+
+    itens_individuais = {
+        "labels": [t["nome"] for t in transacoes if t["tipo"]=="gasto"],
+        "valores": [t["valor"] for t in transacoes if t["tipo"]=="gasto"],
+        "categorias": [t["categoria"] for t in transacoes if t["tipo"]=="gasto"],
+        "cores": [
+            "#4e73df" if t["categoria"]=="necessidades" else
+            "#1cc88a" if t["categoria"]=="lazer" else
+            "#36b9cc" if t["categoria"]=="causas_sociais" else
+            "#f6c23e" if t["categoria"]=="reserva" else
+            "#e74a3b"
+            for t in transacoes if t["tipo"]=="gasto"
+        ],
+        "tipos": [t["tipo"] for t in transacoes]  # necessário para JS
+    }
 
     conn.close()
 
@@ -850,7 +813,10 @@ def calendario():
         grafico_data=grafico_data,
         dt_inicio=dt_inicio,
         dt_fim=dt_fim,
-        tipo=tipo
+        tipo=tipo,
+        categoria_filtro=categoria_filtro,
+        categorias_disponiveis=categorias,
+        itens_individuais=itens_individuais
     )
 
 # =====================================================

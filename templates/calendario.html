@@ -1,384 +1,381 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard por Período</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Calendário - Dashboard</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <style>
-    body { background: #f8f9fa; }
-    #metasChart { max-height: 380px; }
+    body { background:#f8f9fa; }
+    #metasChart, #itensChart { max-height:420px; width:100%!important; }
+    .chart-controls .btn { min-width:96px; }
+    .hidden { display:none !important; }
+    .chart-btn.active { border-color: #4e73df; transform: scale(1.1); }
   </style>
 </head>
-
 <body>
 
-  
-  <!-- NAVBAR -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
-    <div class="container">
-      <a class="navbar-brand d-flex align-items-center" href="/dashboard">
-        <i class="fa-solid fa-piggy-bank me-2"></i> Controle Financeiro
-      </a>
-
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ms-auto align-items-lg-center">
-
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('calendario') }}">
-              <i class="fa-solid fa-chart-pie"></i> Calendário
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('contas') }}">
-              <i class="fa-solid fa-file-invoice-dollar"></i> Contas
-            </a>
-          </li>
-
-          <li class="nav-item mt-2 mt-lg-0">
-            <a href="/transacoes" class="btn btn-light text-primary fw-bold w-100">
-              <i class="fa-solid fa-list"></i> Transações
-            </a>
-          </li>
-
-        </ul>
-      </div>
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="/dashboard">
+      <i class="fa-solid fa-piggy-bank me-2"></i> Controle Financeiro
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto align-items-lg-center">
+        <li class="nav-item">
+          <a class="nav-link text-white" href="{{ url_for('calendario') }}">
+            <i class="fa-solid fa-chart-pie"></i> Calendário
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-white" href="{{ url_for('contas') }}">
+            <i class="fa-solid fa-file-invoice-dollar"></i> Contas
+          </a>
+        </li>
+        <li class="nav-item mt-2 mt-lg-0">
+          <a href="/transacoes" class="btn btn-light text-primary fw-bold w-100">
+            <i class="fa-solid fa-plus"></i> Transações
+          </a>
+        </li>
+      </ul>
     </div>
-  </nav>
+  </div>
+</nav>
 
-  <div class="container py-4">
+<div class="container py-4">
+<h2 class="text-primary mb-3">Dashboard por Intervalo de Datas</h2>
 
-    <h2 class="text-primary mb-3">Dashboard por Intervalo de Datas</h2>
-
-    <!-- FORM FILTRO -->
-    <form method="GET" action="/calendario" class="card p-3 shadow-sm mb-4">
-      <div class="row g-3 align-items-end">
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Data inicial</label>
-          <input type="date" name="inicio" required class="form-control"
-            value="{{ request.args.get('inicio','') }}">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Data final</label>
-          <input type="date" name="fim" required class="form-control"
-            value="{{ request.args.get('fim','') }}">
-        </div>
-        <div class="col-md-4">
-          <button class="btn btn-primary w-100">
-            <i class="fa-solid fa-filter"></i> Aplicar
-          </button>
-        </div>
-      </div>
-    </form>
-
-    <!-- FILTROS DE PERÍODO -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-primary text-white">
-        <h2 class="h6 mb-0">Selecionar Período</h2>
-      </div>
-      <div class="card-body">
-
-        <div class="btn-group w-100 mb-3">
-          <a href="?tipo=diario"    class="btn btn-outline-primary {% if tipo == 'diario' %}active{% endif %}">Diário</a>
-          <a href="?tipo=semanal"   class="btn btn-outline-primary {% if tipo == 'semanal' %}active{% endif %}">Semanal</a>
-          <a href="?tipo=mensal"    class="btn btn-outline-primary {% if tipo == 'mensal' %}active{% endif %}">Mensal</a>
-          <a href="?tipo=anual"     class="btn btn-outline-primary {% if tipo == 'anual' %}active{% endif %}">Anual</a>
-          <a href="?tipo=intervalo" class="btn btn-outline-primary {% if tipo == 'intervalo' %}active{% endif %}">Intervalo</a>
-        </div>
-
-        <!-- Formulário dinâmico por tipo -->
-        {% if tipo == "diario" %}
-        <form method="get" class="row g-3">
-          <input type="hidden" name="tipo" value="diario">
-          <div class="col-md-6">
-            <label class="form-label">Escolha o dia</label>
-            <input type="date" name="dia" class="form-control" required>
-          </div>
-          <div class="col-md-6 align-self-end">
-            <button class="btn btn-primary w-100">Aplicar</button>
-          </div>
-        </form>
-        {% endif %}
-
-        {% if tipo == "semanal" %}
-        <form method="get" class="row g-3">
-          <input type="hidden" name="tipo" value="semanal">
-          <div class="col-md-6">
-            <label class="form-label">Semana</label>
-            <input type="week" name="semana" class="form-control" required>
-          </div>
-          <div class="col-md-6 align-self-end">
-            <button class="btn btn-primary w-100">Aplicar</button>
-          </div>
-        </form>
-        {% endif %}
-
-        {% if tipo == "mensal" %}
-        <form method="get" class="row g-3">
-          <input type="hidden" name="tipo" value="mensal">
-          <div class="col-md-6">
-            <label class="form-label">Mês</label>
-            <input type="month" name="mes" class="form-control" required>
-          </div>
-          <div class="col-md-6 align-self-end">
-            <button class="btn btn-primary w-100">Aplicar</button>
-          </div>
-        </form>
-        {% endif %}
-
-        {% if tipo == "anual" %}
-        <form method="get" class="row g-3">
-          <input type="hidden" name="tipo" value="anual">
-          <div class="col-md-6">
-            <label class="form-label">Ano</label>
-            <input type="number" min="2000" max="2100" name="ano" class="form-control" placeholder="2025" required>
-          </div>
-          <div class="col-md-6 align-self-end">
-            <button class="btn btn-primary w-100">Aplicar</button>
-          </div>
-        </form>
-        {% endif %}
-
-        {% if tipo == "intervalo" %}
-        <form method="get" class="row g-3">
-          <input type="hidden" name="tipo" value="intervalo">
-          <div class="col-md-6">
-            <label class="form-label">Início</label>
-            <input type="date" name="inicio" class="form-control" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Fim</label>
-            <input type="date" name="fim" class="form-control" required>
-          </div>
-          <div class="col-12">
-            <button class="btn btn-primary w-100">Aplicar</button>
-          </div>
-        </form>
-        {% endif %}
-
-      </div>
+<form method="GET" action="/calendario" class="card p-3 shadow-sm mb-4">
+  <div class="row g-3">
+    <div class="col-md-3">
+      <label class="form-label fw-semibold">Tipo</label>
+      <select id="selectTipo" name="tipo" class="form-select">
+        <option value="diario" {% if tipo=='diario' %}selected{% endif %}>Diário</option>
+        <option value="semanal" {% if tipo=='semanal' %}selected{% endif %}>Semanal</option>
+        <option value="mensal" {% if tipo=='mensal' %}selected{% endif %}>Mensal</option>
+        <option value="anual" {% if tipo=='anual' %}selected{% endif %}>Anual</option>
+        <option value="intervalo" {% if tipo=='intervalo' %}selected{% endif %}>Intervalo</option>
+      </select>
     </div>
 
-    {% if filtro_ativo %}
-
-    <!-- RESUMO -->
-    <div class="row mb-4">
-      <div class="col-md-4"><div class="card shadow-sm"><div class="card-body">
-        <h6>Total Rendas</h6><h4 class="text-success">R$ {{ '%.2f'|format(total_rendas) }}</h4>
-      </div></div></div>
-
-      <div class="col-md-4"><div class="card shadow-sm"><div class="card-body">
-        <h6>Total Gastos</h6><h4 class="text-danger">R$ {{ '%.2f'|format(total_gastos) }}</h4>
-      </div></div></div>
-
-      <div class="col-md-4"><div class="card shadow-sm"><div class="card-body">
-        <h6>Saldo</h6><h4 class="text-primary">R$ {{ '%.2f'|format(saldo) }}</h4>
-      </div></div></div>
+    <div id="campoDia" class="col-md-3 hidden">
+      <label class="form-label fw-semibold">Dia</label>
+      <input type="date" name="dia" class="form-control" value="{{ dt_inicio }}">
     </div>
 
-    <!-- TABELA -->
-    <div class="card shadow-sm mb-4">
-      <div class="card-header bg-primary text-white">Metas vs Gastos</div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-striped">
-            <thead>
-              <tr><th>Categoria</th><th>Meta</th><th>Gasto</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {% for cat, d in comparacao.items() %}
-              <tr>
-                <td>{{ cat.capitalize() }}</td>
-                <td>R$ {{ '%.2f'|format(d.meta) }}</td>
-                <td>R$ {{ '%.2f'|format(d.gasto) }}</td>
-                <td>
-                  {% if d.status == 'dentro' %}
-                    <span class="badge bg-success">Dentro</span>
-                  {% else %}
-                    <span class="badge bg-danger">Excedida</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+    <div id="campoSemana" class="col-md-3 hidden">
+      <label class="form-label fw-semibold">Semana</label>
+      <input type="week" name="semana" class="form-control">
     </div>
 
-    <!-- SELETOR DE GRÁFICO -->
-    <div class="card shadow-sm mb-3">
-      <div class="card-header bg-primary text-white">
-        <span>Gráfico do Período</span>
+    <div id="campoMes" class="col-md-3 hidden">
+      <label class="form-label fw-semibold">Mês</label>
+      <input type="month" name="mes" class="form-control">
+    </div>
+
+    <div id="campoAno" class="col-md-3 hidden">
+      <label class="form-label fw-semibold">Ano</label>
+      <input type="number" name="ano" min="1900" max="2100" value="{{ dt_inicio.year }}" class="form-control">
+    </div>
+
+    <div id="campoInicio" class="col-md-3 hidden">
+      <label class="form-label fw-semibold">Início</label>
+      <input type="date" name="inicio" class="form-control" value="{{ dt_inicio }}">
+    </div>
+
+    <div id="campoFim" class="col-md-3 hidden">
+      <label class="form-label fw-semibold">Fim</label>
+      <input type="date" name="fim" class="form-control" value="{{ dt_fim }}">
+    </div>
+
+    <div class="col-12">
+      <button class="btn btn-primary w-100">Aplicar</button>
+    </div>
+  </div>
+</form>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="btn-group w-100">
+      <a href="?tipo=diario" class="btn btn-outline-primary {% if tipo=='diario' %}active{% endif %}">Diário</a>
+      <a href="?tipo=semanal" class="btn btn-outline-primary {% if tipo=='semanal' %}active{% endif %}">Semanal</a>
+      <a href="?tipo=mensal" class="btn btn-outline-primary {% if tipo=='mensal' %}active{% endif %}">Mensal</a>
+      <a href="?tipo=anual" class="btn btn-outline-primary {% if tipo=='anual' %}active{% endif %}">Anual</a>
+      <a href="?tipo=intervalo" class="btn btn-outline-primary {% if tipo=='intervalo' %}active{% endif %}">Intervalo</a>
+    </div>
+  </div>
+</div>
+
+{% if filtro_ativo %}
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body text-center">
+        <h6>Total Rendas</h6>
+        <h4 class="text-success">R$ {{ '%.2f'|format(total_rendas) }}</h4>
       </div>
-      <div class="card-body">
-       <div class="btn-group mb-3">
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body text-center">
+        <h6>Total Gastos</h6>
+        <h4 class="text-danger">R$ {{ '%.2f'|format(total_gastos) }}</h4>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body text-center">
+        <h6>Saldo</h6>
+        <h4 class="text-primary">R$ {{ '%.2f'|format(saldo) }}</h4>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-primary text-white">Metas vs Gastos</div>
+  <div class="card-body">
+    <div class="table-responsive mb-3">
+      <table class="table table-striped">
+        <thead>
+          <tr><th>Categoria</th><th>Meta (R$)</th><th>Gasto (R$)</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          {% for cat, d in comparacao.items() %}
+          <tr>
+            <td>{{ cat.capitalize() }}</td>
+            <td>R$ {{ '%.2f'|format(d.meta) }}</td>
+            <td>R$ {{ '%.2f'|format(d.gasto) }}</td>
+            <td>
+              {% if d.status == 'dentro' %}
+                <span class="badge bg-success">Dentro</span>
+              {% else %}
+                <span class="badge bg-danger">Excedida</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-between mb-2 chart-controls">
+      <div>
         <button class="btn btn-outline-primary" id="btnBar">Barra</button>
         <button class="btn btn-outline-primary" id="btnPie">Pizza</button>
         <button class="btn btn-outline-primary" id="btnPareto">Pareto</button>
-       </div>
-
-        <canvas id="metasChart"></canvas>
+        <button class="btn btn-outline-primary" id="btnItens">Gráfico por Itens</button>
       </div>
     </div>
 
-    {% endif %}
+    <canvas id="metasChart"></canvas>
+
+    <div id="itensChartContainer" class="hidden mt-4">
+      <select id="filtroCategoria" class="form-select mb-2 w-auto">
+        <option value="todas">Todas Categorias</option>
+        {% for cat in ['necessidades','lazer','causas_sociais','reserva','investimento'] %}
+        <option value="{{ cat }}">{{ cat.replace('_',' ').capitalize() }}</option>
+        {% endfor %}
+      </select>
+
+      <canvas id="itensChart"></canvas>
+
+      <div id="tabelaItens" class="mt-3 table-responsive">
+        <table class="table table-striped">
+          <thead>
+            <tr><th>Item</th><th>Categoria</th><th>Valor (R$)</th></tr>
+          </thead>
+          <tbody>
+            <tr id="noItemsRow" class="text-center {% if itens_individuais.labels|length > 0 %}d-none{% endif %}">
+              <td colspan="3">Nenhum item registrado</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
+</div>
+{% endif %}
 
-  <!-- SCRIPTS DE GRÁFICO -->
+<footer class="bg-primary text-white text-center py-3 mt-4">
+  <p class="mb-0">&copy; 2025 Arnaldo Rocha Filho. Todos os direitos reservados.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-{% if filtro_ativo %}
-
-const data = JSON.parse('{{ grafico_data | safe }}');
-
-let chart = null;
-const ctx = document.getElementById("metasChart");
-
-// ===============================
-// FUNÇÃO: gerar acumulado (%)
-// ===============================
-function gerarPareto(values) {
-    let total = values.reduce((a, b) => a + b, 0);
-    let acumulado = 0;
-    return values.map(v => {
-        acumulado += v;
-        return (acumulado / total) * 100;
-    });
+function atualizarCampos() {
+    const tipo = document.getElementById("selectTipo").value;
+    document.querySelectorAll("#campoDia, #campoSemana, #campoMes, #campoAno, #campoInicio, #campoFim")
+        .forEach(el => el.classList.add("hidden"));
+    if(tipo==="diario") campoDia.classList.remove("hidden");
+    if(tipo==="semanal") campoSemana.classList.remove("hidden");
+    if(tipo==="mensal") campoMes.classList.remove("hidden");
+    if(tipo==="anual") campoAno.classList.remove("hidden");
+    if(tipo==="intervalo") { campoInicio.classList.remove("hidden"); campoFim.classList.remove("hidden"); }
 }
+document.getElementById("selectTipo").addEventListener("change", atualizarCampos);
+document.addEventListener("DOMContentLoaded", atualizarCampos);
 
-// ===============================
-// FUNÇÃO PRINCIPAL DE CRIAR GRÁFICO
-// ===============================
-function criarGrafico(tipo) {
-    if (chart) chart.destroy();
+{% if filtro_ativo %}
+const data = JSON.parse('{{ grafico_data | safe }}');
+const ctxMetas = document.getElementById("metasChart").getContext("2d");
+let metasChart = null;
 
-    // -------------------------------
-    // 1) GRÁFICO PARETO
-    // BARRA = Gastos
-    // LINHA = Metas acumuladas (%)
-    // -------------------------------
-    if (tipo === "pareto") {
+// Função para criar gráfico Metas vs Gastos
+function criarGrafico(tipo="bar") {
+    // Sempre oculta o container de itens
+    document.getElementById("itensChartContainer").classList.add("hidden");
 
-        const gastos = data.gastos;   // Barras
-        const metas = data.metas;     // Linha acumulada (%)
+    if(metasChart) metasChart.destroy();
 
-        const acumulado = gerarPareto(metas);
-
-        chart = new Chart(ctx, {
-            type: "bar",
+    if(tipo === "bar" || tipo === "pie") {
+        metasChart = new Chart(ctxMetas, {
+            type: tipo==="pie"?"pie":"bar",
             data: {
                 labels: data.categorias,
                 datasets: [
-                    {
-                        label: "Gastos",
-                        data: gastos,
-                        backgroundColor: data.cores
-                    },
-                    {
-                        label: "Metas Acumuladas (%)",
-                        data: acumulado,
-                        type: "line",
-                        yAxisID: "percent",
-                        borderWidth: 3,
-                        tension: 0.4,
-
-                        // 🔥 bolinhas coloridas pela categoria
-                        pointRadius: 7,
-                        pointBackgroundColor: data.cores,
-                        pointBorderColor: "#000",
-                        pointBorderWidth: 1,
-
-                        fill: false
-                    }
+                    { label:"Gasto (R$)", data:data.gastos, backgroundColor:data.cores },
+                    { label:"Meta (R$)", data:data.metas, backgroundColor:data.cores.map(c=>c+'55') }
                 ]
             },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: true },
-                    percent: {
-                        beginAtZero: true,
-                        position: "right",
-                        max: 100,
-                        ticks: {
-                            callback: v => v + "%"
-                        }
-                    }
+            options:{
+                responsive:true,
+                scales:{ y:{ beginAtZero:true } },
+                plugins:{ legend:{ position:'bottom' } }
+            }
+        });
+    } else if(tipo === "pareto") {
+        // Gráfico Pareto: barras de gastos + linha de meta
+        metasChart = new Chart(ctxMetas, {
+        data: {
+            labels: data.categorias,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Gasto (R$)',
+                    data: data.gastos,
+                    backgroundColor: data.cores,
+                    order: 1
+                },
+                {
+                    type: 'line',
+                    label: 'Meta (R$)',
+                    data: data.metas,
+                    borderColor: 'red',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.2,
+                    pointRadius: 3,
+                    pointBackgroundColor: 'red',
+                    order: 10,  // aumentar order garante que linha fique na frente
+                    yAxisID: 'y' // manter na mesma escala
                 }
-            }
-        });
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                y: { beginAtZero:true, title:{ display:true, text:'Valor (R$)' } }
+            },
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
 
-    // -------------------------------
-    // 2) GRÁFICO PIZZA
-    // Gasto + Meta juntos
-    // -------------------------------
-    } else if (tipo === "pie") {
-
-        chart = new Chart(ctx, {
-            type: "pie",
-            data: {
-                labels: data.categorias,
-                datasets: [
-                    {
-                        label: "Gastos",
-                        data: data.gastos,
-                        backgroundColor: data.cores
-                    },
-                    {
-                        label: "Metas",
-                        data: data.metas,
-                        backgroundColor: data.cores.map(c => c + "88")
-                    }
-                ]
-            }
-        });
-
-    // -------------------------------
-    // 3) GRÁFICO DE BARRAS PADRÃO
-    // -------------------------------
-    } else {
-
-        chart = new Chart(ctx, {
-            type: "bar",
-            data: {
-                labels: data.categorias,
-                datasets: [
-                    {
-                        label: "Gasto",
-                        data: data.gastos,
-                        backgroundColor: data.cores
-                    },
-                    {
-                        label: "Meta",
-                        data: data.metas,
-                        backgroundColor: data.cores.map(c => c + "55")
-                    }
-                ]
-            }
-        });
     }
 }
 
-// ===============================
-// BOTÕES PARA TROCAR O GRÁFICO
-// ===============================
 document.getElementById("btnBar").onclick = () => criarGrafico("bar");
 document.getElementById("btnPie").onclick = () => criarGrafico("pie");
 document.getElementById("btnPareto").onclick = () => criarGrafico("pareto");
 
-// ===============================
-// GERA O PRIMEIRO GRÁFICO AO ABRIR
-// ===============================
-criarGrafico("bar");
+criarGrafico(); // renderiza inicialmente gráfico principal
 
+// --- Gráfico por Itens ---
+{% if itens_individuais is defined and itens_individuais %}
+const itensOrig = JSON.parse('{{ itens_individuais | tojson | safe }}');
+const ctxItens = document.getElementById("itensChart").getContext("2d");
+let itensChart = null;
+const tabelaBody = document.querySelector("#tabelaItens tbody");
+
+function atualizarTabela(filtro) {
+    tabelaBody.innerHTML = "";
+    (itensOrig.labels || []).forEach((label,i)=>{
+        const cat = (itensOrig.categorias[i] || "outros").toLowerCase();
+        if(filtro==="todas" || cat===filtro.toLowerCase()){
+            const valor = itensOrig.valores[i] || 0;
+            const row = `<tr>
+                <td>${label}</td>
+                <td>${cat.replace('_',' ')}</td>
+                <td>R$ ${valor.toFixed(2)}</td>
+            </tr>`;
+            tabelaBody.innerHTML += row;
+        }
+    });
+}
+
+function desenharItens(filtro="todas") {
+    const categorias = ['necessidades','lazer','causas_sociais','reserva','investimento'];
+    const datasets = categorias.map(cat => ({
+        label: cat.replace('_',' '),
+        data: [],
+        backgroundColor: itensOrig.cores[itensOrig.categorias.findIndex(c => c === cat)] || "#4e73df"
+    }));
+
+    itensOrig.labels.forEach((label,i)=>{
+        const cat = itensOrig.categorias[i].toLowerCase();
+        const valor = itensOrig.valores[i];
+        if(valor <= 0) return;
+        if(filtro==="todas" || cat===filtro.toLowerCase()){
+            datasets.forEach(ds => {
+                if(ds.label.toLowerCase().replace(' ','_')===cat) ds.data.push(valor);
+                else ds.data.push(0);
+            });
+        }
+    });
+
+    const labels = itensOrig.labels.filter((_,i)=>{
+        const cat = itensOrig.categorias[i].toLowerCase();
+        return filtro==="todas" || cat===filtro.toLowerCase();
+    });
+
+    if(itensChart) itensChart.destroy();
+    itensChart = new Chart(ctxItens, {
+        type: "bar",
+        data: { labels, datasets },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: { legend:{ position:'bottom' }, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: R$ ${ctx.raw.toFixed(2)}` } } },
+            scales: { x:{ stacked:true, beginAtZero:true }, y:{ stacked:true } }
+        }
+    });
+
+    atualizarTabela(filtro);
+}
+
+// Botão "Gráfico por Itens"
+document.getElementById("btnItens").onclick = () => {
+    document.getElementById("itensChartContainer").classList.remove("hidden");
+    desenharItens(document.getElementById("filtroCategoria").value);
+};
+
+// Filtro de categoria
+document.getElementById("filtroCategoria").addEventListener("change", function(){
+    desenharItens(this.value);
+});
+{% endif %}
 {% endif %}
 </script>
 
