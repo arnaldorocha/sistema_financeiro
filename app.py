@@ -50,6 +50,40 @@ def criar_admin_se_nao_existir(cursor):
     else:
         print("Conta admin já existe.")
 
+def buscar_categorias_personalizadas(usuario_id):
+    conn = conectar_bd()
+    if not conn:
+        return []
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM CategoriasPersonalizadas WHERE usuario_id = ? ORDER BY termo ASC", (usuario_id,))
+    categorias = cursor.fetchall()
+    conn.close()
+    return categorias
+
+
+def obter_categoria_por_termo(usuario_id, nome):
+    if not nome:
+        return None
+    termo_busca = nome.strip().lower()
+    conn = conectar_bd()
+    if not conn:
+        return None
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT categoria FROM CategoriasPersonalizadas WHERE usuario_id = ? AND LOWER(termo) = ?", (usuario_id, termo_busca))
+    row = cursor.fetchone()
+    if row:
+        conn.close()
+        return row['categoria']
+
+    # Pesquisa parcial por termo contido no nome
+    cursor.execute("SELECT categoria FROM CategoriasPersonalizadas WHERE usuario_id = ? AND ? LIKE '%' || LOWER(termo) || '%'", (usuario_id, termo_busca))
+    row = cursor.fetchone()
+    conn.close()
+    return row['categoria'] if row else None
+
+
 def inicializar_bd():
     conn = conectar_bd()
     if conn is None:
@@ -111,6 +145,13 @@ def inicializar_bd():
         causas_sociais REAL DEFAULT 10.0,
         lazer REAL DEFAULT 20.0,
         necessidades REAL DEFAULT 50.0
+    )''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS CategoriasPersonalizadas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER NOT NULL,
+        termo TEXT NOT NULL,
+        categoria TEXT NOT NULL
     )''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS Notificacoes (
@@ -239,161 +280,438 @@ def cadastro():
 # =====================================================
 # Rotas para Dashboard e Administração
 # =====================================================
-
 @app.route('/dashboard')
 def dashboard():
+
     if 'user_id' not in session or session.get('role') != 'user':
         flash("Você não está autenticado como usuário comum.", "error")
         return redirect(url_for('index'))
+
     try:
-         # Dados do mês atual
-        data_inicio = datetime.now().replace(day=1).strftime('%Y-%m-%d')
-        data_fim = (datetime.now().replace(day=28) + timedelta(days=4)).replace(day=1).strftime('%Y-%m-%d')
-        relatorio_datas = {'inicio': data_inicio, 'fim': data_fim}
-    
+
         conn = conectar_bd()
+
         if conn is None:
             flash("Erro ao conectar ao banco de dados", "danger")
             return redirect(url_for('index'))
-      
+
         cursor = conn.cursor()
-        # Filtra transações do mês atual para o usuário autenticado
-      
+
+
+        # -----------------------------
+        # TOTAL GERAL (SEM FILTRO DE DATA)
+        # -----------------------------
+
         cursor.execute("""
-            SELECT * FROM Transacoes 
-            WHERE usuario_id = ? 
-            AND data BETWEEN ? AND ?
+            SELECT SUM(valor)
+            FROM Transacoes
+            WHERE usuario_id = ?
+            AND LOWER(tipo) = 'renda'
+        """, (session['user_id'],))
+
+        total_rendas = cursor.fetchone()[0] or 0
+
+
+        cursor.execute("""
+            SELECT SUM(valor)
+            FROM Transacoes
+            WHERE usuario_id = ?
+            AND LOWER(tipo) = 'gasto'
+        """, (session['user_id'],))
+
+        total_gastos = cursor.fetchone()[0] or 0
+
+
+        saldo = round(total_rendas - total_gastos, 2)
+
+
+        alerta_saldo = (
+            "Seu saldo está negativo. Recomenda-se aumentar a renda ou reduzir os gastos."
+            if saldo < 0 else ""
+        )
+
+
+        # -----------------------------
+        # CONFIGURAÇÕES
+        # -----------------------------
+
+        cursor.execute(
+            "SELECT * FROM Configuracoes LIMIT 1"
+        )
+
+        configuracoes = cursor.fetchone()
+
+
+        categorias = [
+            'necessidades',
+            'lazer',
+            'causas_sociais',
+            'reserva',
+            'investimento'
+        ]
+
+
+        # -----------------------------
+        # METAS
+        # -----------------------------
+
+        metas = {
+
+            cat:
+                total_rendas *
+                (configuracoes[cat] / 100)
+
+            for cat in categorias
+
+        }
+
+
+        orientacao_gastos = {
+
+            'investimento':
+                "Investimento é importante para garantir renda futura.",
+
+            'reserva':
+                "Reserva de emergência é prioridade.",
+
+            'causas_sociais':
+                "Doações devem ser conscientes.",
+
+            'lazer':
+                "Controle gastos com lazer.",
+
+            'necessidades':
+                "Essenciais devem ser controlados."
+        }
+
+
+        # -----------------------------
+        # GASTOS POR CATEGORIA (TOTAL)
+        # -----------------------------
+
+        gastos = {}
+
+        for cat in categorias:
+
+            cursor.execute("""
+
+                SELECT SUM(valor)
+
+                FROM Transacoes
+
+                WHERE usuario_id = ?
+
+                AND LOWER(tipo) = 'gasto'
+
+                AND categoria = ?
+
+            """, (session['user_id'], cat))
+
+            gastos[cat] = cursor.fetchone()[0] or 0
+
+
+        # -----------------------------
+        # COMPARAÇÃO
+        # -----------------------------
+
+        comparacao = {
+
+            cat: {
+
+                "meta": metas[cat],
+
+                "gasto": gastos[cat],
+
+                "status":
+                    "dentro"
+                    if gastos[cat] <= metas[cat]
+                    else "excedido"
+
+            }
+
+            for cat in categorias
+
+        }
+
+
+        # -----------------------------
+        # GRÁFICO
+        # -----------------------------
+
+        cores = [
+            '#4e73df',
+            '#1cc88a',
+            '#36b9cc',
+            '#f6c23e',
+            '#e74a3b'
+        ]
+
+
+        grafico_data = {
+
+            'categorias':
+                [c.capitalize() for c in categorias],
+
+            'metas':
+                [metas[c] for c in categorias],
+
+            'gastos':
+                [gastos[c] for c in categorias],
+
+            'cores': cores,
+
+            'cores_economia':
+                [c + '33' for c in cores]
+
+        }
+
+
+        # -----------------------------
+        # TODAS AS TRANSAÇÕES (SEM FILTRO)
+        # -----------------------------
+
+        cursor.execute("""
+
+            SELECT *
+
+            FROM Transacoes
+
+            WHERE usuario_id = ?
+
             ORDER BY data DESC
-        """, (session['user_id'], data_inicio, data_fim))
+
+        """, (session['user_id'],))
 
         transacoes = cursor.fetchall()
 
-        cursor.execute("SELECT * FROM Configuracoes LIMIT 1")
-        configuracoes = cursor.fetchone()
 
-        # Total renda e total gasto
-        cursor.execute("""
-            SELECT SUM(valor) 
-            FROM Transacoes 
-            WHERE usuario_id = ? 
-            AND LOWER(tipo) = 'renda'
-            AND data BETWEEN ? AND ?
-        """, (session['user_id'], data_inicio, data_fim))
-        total_rendas = cursor.fetchone()[0] or 0
-      
-        cursor.execute("""
-            SELECT SUM(valor) 
-            FROM Transacoes 
-            WHERE usuario_id = ? 
-            AND LOWER(tipo) = 'gasto'
-            AND data BETWEEN ? AND ?
-        """, (session['user_id'], data_inicio, data_fim))
-        total_gastos = cursor.fetchone()[0] or 0
-
-        saldo = round(total_rendas - total_gastos, 2)
-        alerta_saldo = "Seu saldo está negativo. Recomenda-se aumentar a renda ou reduzir os gastos." if saldo < 0 else ""
-        metas = {
-            'investimento': total_rendas * (configuracoes['investimento'] / 100),
-            'reserva': total_rendas * (configuracoes['reserva'] / 100),
-            'causas_sociais': total_rendas * (configuracoes['causas_sociais'] / 100),
-            'lazer': total_rendas * (configuracoes['lazer'] / 100),
-            'necessidades': total_rendas * (configuracoes['necessidades'] / 100)
-        }
-        orientacao_gastos = {
-            'investimento': "Investimento é importante para garantir uma renda extra.",
-            'reserva': "Uma reserva de emergência é crucial. Não use este valor para despesas do dia a dia.",
-            'causas_sociais': "Doações são uma ótima forma de ajudar. Destine esse valor com consciência.",
-            'lazer': "Lazer é importante, mas não ultrapasse sua meta para não comprometer outras necessidades.",
-            'necessidades': "Esses gastos são essenciais, mas sempre busque eficiência e evite excessos."
-        }
-        categorias = ['necessidades', 'lazer', 'causas_sociais', 'reserva', 'investimento']
-        gastos = {}
-        for cat in categorias:
-            cursor.execute("""
-                SELECT SUM(valor) 
-                FROM Transacoes 
-                WHERE usuario_id = ?
-                AND LOWER(tipo) = 'gasto'
-                AND categoria = ?
-                AND data BETWEEN ? AND ?
-            """, (session['user_id'], cat.lower(), data_inicio, data_fim))
-            gastos[cat] = cursor.fetchone()[0] or 0
-        comparacao = {cat: {
-                "meta": metas[cat],
-                "gasto": gastos[cat],
-                "status": "dentro" if gastos[cat] <= metas[cat] else "excedido"
-            } for cat in categorias}
-        cores = ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b']
-        grafico_data = {
-            'categorias': [cat.capitalize() for cat in categorias],
-            'metas': [metas[cat] for cat in categorias],
-            'gastos': [gastos[cat] for cat in categorias],
-            'cores': cores,
-            'cores_economia': [c + '33' for c in cores]
-        }
         conn.close()
-        return render_template('dashboard.html',
-                               relatorio_datas=relatorio_datas,
-                               saldo=saldo,
-                               metas={k: round(v, 2) for k, v in metas.items()},
-                               alerta_saldo=alerta_saldo,
-                               orientacao_gastos=orientacao_gastos,
-                               total_rendas=round(total_rendas, 2),
-                               total_gastos=round(total_gastos, 2),
-                               transacoes=transacoes,
-                               gastos={k: round(v, 2) for k, v in gastos.items()},
-                               comparacao=comparacao,
-                               grafico_data=json.dumps(grafico_data))
+
+
+        return render_template(
+
+            'dashboard.html',
+
+            saldo=saldo,
+
+            metas={k: round(v, 2) for k, v in metas.items()},
+
+            alerta_saldo=alerta_saldo,
+
+            orientacao_gastos=orientacao_gastos,
+
+            total_rendas=round(total_rendas, 2),
+
+            total_gastos=round(total_gastos, 2),
+
+            transacoes=transacoes,
+
+            gastos={k: round(v, 2) for k, v in gastos.items()},
+
+            comparacao=comparacao,
+
+            grafico_data=json.dumps(grafico_data)
+
+        )
+
+
     except Exception as e:
-        flash(f"Erro ao carregar transações: {str(e)}", "error")
+
+        flash(
+            f"Erro ao carregar dashboard: {str(e)}",
+            "error"
+        )
+
         return redirect(url_for('index'))
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
-    if 'user_id' not in session or session.get('role') != 'admin':
-        flash("Acesso negado.", "error")
+    if not admin_required():
         return redirect(url_for('index'))
     try:
         conn = sqlite3.connect('financeiro.db')
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM usuarios")
+
+        search_username = request.args.get('username', '').strip().lower()
+        search_role = request.args.get('role', '').strip().lower()
+
+        query = "SELECT * FROM usuarios WHERE 1=1"
+        params = []
+
+        if search_username:
+            query += " AND LOWER(username) LIKE ?"
+            params.append(f"%{search_username}%")
+
+        if search_role in ['admin', 'user']:
+            query += " AND role = ?"
+            params.append(search_role)
+
+        query += " ORDER BY id DESC"
+
+        cursor.execute(query, params)
         users = cursor.fetchall()
         conn.close()
-        return render_template('admin_dashboard.html', users=users)
+
+        return render_template('admin_dashboard.html', users=users, search_username=search_username, search_role=search_role)
     except Exception as e:
         flash(f"Erro ao carregar dados administrativos: {str(e)}", "error")
         return redirect(url_for('index'))
+
+@app.route('/categorias', methods=['GET', 'POST'])
+def categorias():
+    if 'user_id' not in session:
+        flash('Ação requer login.', 'error')
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        termo = request.form.get('termo', '').strip()
+        categoria = request.form.get('categoria', '').strip().lower()
+
+        if not termo or not categoria:
+            flash('Preencha termo e categoria.', 'error')
+            return redirect(url_for('categorias'))
+
+        conn = conectar_bd()
+        cursor = conn.cursor()
+        cursor.execute('INSERT INTO CategoriasPersonalizadas (usuario_id, termo, categoria) VALUES (?, ?, ?)',
+                       (session['user_id'], termo, categoria))
+        conn.commit()
+        conn.close()
+
+        flash('Categoria personalizada adicionada.', 'success')
+        return redirect(url_for('categorias'))
+
+    categorias_usuario = buscar_categorias_personalizadas(session['user_id'])
+    return render_template('categorias.html', categorias=categorias_usuario)
+
+@app.route('/categorias/excluir/<int:categoria_id>')
+def excluir_categoria(categoria_id):
+    if 'user_id' not in session:
+        flash('Ação requer login.', 'error')
+        return redirect(url_for('index'))
+
+    conn = conectar_bd()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM CategoriasPersonalizadas WHERE id = ? AND usuario_id = ?',
+                   (categoria_id, session['user_id']))
+    conn.commit()
+    conn.close()
+
+    flash('Categoria personalizada removida.', 'success')
+    return redirect(url_for('categorias'))
+
+@app.route('/gestao_usuarios')
+def gestao_usuarios():
+    if not admin_required():
+        return redirect(url_for('index'))
+    search_username = request.args.get('username', '').strip().lower()
+    search_role = request.args.get('role', '').strip().lower()
+
+    conn = sqlite3.connect('financeiro.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    query = "SELECT * FROM usuarios WHERE 1=1"
+    params = []
+
+    if search_username:
+        query += " AND LOWER(username) LIKE ?"
+        params.append(f"%{search_username}%")
+
+    if search_role in ['admin', 'user']:
+        query += " AND role = ?"
+        params.append(search_role)
+
+    query += " ORDER BY id DESC"
+
+    cursor.execute(query, params)
+    users = cursor.fetchall()
+    conn.close()
+
+    return render_template('gestao_usuarios.html', users=users, search_username=search_username, search_role=search_role)
+
+@app.route('/excluir_usuario/<int:user_id>')
+def excluir_usuario(user_id):
+    if not admin_required():
+        return redirect(url_for('index'))
+
+    if session.get('user_id') == user_id:
+        flash("Você não pode excluir o próprio usuário.", "error")
+        return redirect(url_for('gestao_usuarios'))
+
+    conn = sqlite3.connect('financeiro.db')
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+    flash("Usuário excluído com sucesso.", "success")
+    return redirect(url_for('gestao_usuarios'))
+
+@app.route('/alterar_role_usuario/<int:user_id>', methods=['POST'])
+def alterar_role_usuario(user_id):
+    if not admin_required():
+        return redirect(url_for('index'))
+
+    nova_role = request.form.get('role')
+    if nova_role not in ['admin', 'user']:
+        flash("Role inválida.", "error")
+        return redirect(url_for('gestao_usuarios'))
+
+    conn = sqlite3.connect('financeiro.db')
+    cursor = conn.cursor()
+    cursor.execute("UPDATE usuarios SET role = ? WHERE id = ?", (nova_role, user_id))
+    conn.commit()
+    conn.close()
+
+    flash("Role de usuário atualizada com sucesso.", "success")
+    return redirect(url_for('gestao_usuarios'))
 
 # =====================================================
 # Rotas de Transações, gestão e Metas
 # =====================================================
 
-@app.route('/gestao_usuarios')
-def gestao_usuarios():
-    return render_template('gestao_usuarios.html')
+# gestao_usuarios já definida anteriormente com controle de acesso, busca e edição.
 
 @app.route('/transacoes', methods=['GET'])
 def transacoes_view():
     if 'user_id' not in session:
         flash("Você não está autenticado.", "error")
         return redirect(url_for('index'))
-    periodo = request.args.get('periodo')
-    pesquisa = request.args.get('pesquisa', '').lower()
+
+    periodo = request.args.get('periodo', '').strip().lower()
+    categoria = request.args.get('categoria', '').strip().lower()
+    pesquisa = request.args.get('pesquisa', '').strip().lower()
+
     conn = conectar_bd()
     if conn is None:
         flash("Erro ao conectar ao banco de dados", "danger")
         return redirect(url_for('dashboard'))
+
     cursor = conn.cursor()
+    query = "SELECT * FROM Transacoes WHERE usuario_id = ?"
+    params = [session['user_id']]
+
     if periodo:
-        cursor.execute("SELECT * FROM Transacoes WHERE usuario_id = ? AND periodo = ? ORDER BY data DESC", (session['user_id'], periodo))
-    else:
-        cursor.execute("SELECT * FROM Transacoes WHERE usuario_id = ? ORDER BY data DESC", (session['user_id'],))
+        query += " AND LOWER(periodo) = ?"
+        params.append(periodo)
+
+    if categoria and categoria != 'todas':
+        query += " AND LOWER(categoria) = ?"
+        params.append(categoria)
+
+    if pesquisa:
+        query += " AND (LOWER(nome) LIKE ? OR LOWER(tipo) LIKE ? OR LOWER(categoria) LIKE ? OR LOWER(periodo) LIKE ?)"
+        wildcard = f"%{pesquisa}%"
+        params.extend([wildcard, wildcard, wildcard, wildcard])
+
+    query += " ORDER BY data DESC"
+    cursor.execute(query, params)
     transacoes = cursor.fetchall()
     conn.close()
-    if pesquisa:
-        transacoes = [t for t in transacoes if pesquisa in t['nome'].lower()]
-    return render_template('transacoes.html', transacoes=transacoes, periodo=periodo, pesquisa=pesquisa)
+
+    return render_template('transacoes.html', transacoes=transacoes, periodo=periodo, pesquisa=pesquisa, categoria=categoria)
 
 def notificar_transacoes():
     conn = conectar_bd()
@@ -435,20 +753,23 @@ def adicionar_transacao():
         except:
             return "Erro: valor inválido", 400
 
+        categoria_form = request.form.get('categoria', '').strip().lower()
+
         # Regras para RENDA
         if tipo == 'renda':
             periodo = ""              # 🔥 evita erro do banco (NOT NULL)
-            categoria = request.form.get('categoria') or "renda"
+            categoria = 'renda'
 
         # Regras para GASTO
         else:
             periodo = request.form.get('periodo')
-            categoria = request.form.get('categoria')
-
             if not periodo:
                 return "Erro: período é obrigatório para gastos", 400
-            if not categoria:
-                return "Erro: categoria é obrigatória para gastos", 400
+
+            if categoria_form and categoria_form != 'auto':
+                categoria = categoria_form
+            else:
+                categoria = obter_categoria_por_termo(session['user_id'], nome) or 'necessidades'
 
         # Inserção no banco
         conn = conectar_bd()
@@ -495,12 +816,15 @@ def editar_transacao(id):
 
         else:
             periodo = request.form.get('periodo')
-            categoria = request.form.get('categoria')
+            categoria_form = request.form.get('categoria', '').strip().lower()
 
             if not periodo:
                 return "Erro: período obrigatório para gastos", 400
-            if not categoria:
-                return "Erro: categoria obrigatória para gastos", 400
+
+            if categoria_form and categoria_form != 'auto':
+                categoria = categoria_form
+            else:
+                categoria = obter_categoria_por_termo(session['user_id'], nome) or 'necessidades'
 
         cursor.execute("""
             UPDATE Transacoes
@@ -565,21 +889,37 @@ def contas():
     if 'user_id' not in session:
         flash("Você não está autenticado.", "error")
         return redirect(url_for('index'))
-    periodo = request.args.get('periodo')
-    pesquisa = request.args.get('pesquisa', '').lower()
+
+    periodo = request.args.get('periodo', '').strip()
+    pesquisa = request.args.get('pesquisa', '').strip().lower()
+    tipo = request.args.get('tipo', '').strip().lower()
+
     conn = conectar_bd()
     cursor = conn.cursor()
+
+    query = "SELECT * FROM Avisos WHERE usuario_id = ?"
+    params = [session['user_id']]
+
     if periodo:
-        cursor.execute("SELECT * FROM Avisos WHERE usuario_id = ? AND data LIKE ? ORDER BY data ASC",
-                       (session['user_id'], f'%{periodo}%'))
-    else:
-        cursor.execute("SELECT * FROM Avisos WHERE usuario_id = ? ORDER BY data ASC", (session['user_id'],))
+        query += " AND data LIKE ?"
+        params.append(f"%{periodo}%")
+
+    if tipo and tipo != 'todos':
+        query += " AND LOWER(tipo) = ?"
+        params.append(tipo)
+
+    if pesquisa:
+        query += " AND (LOWER(nome) LIKE ? OR LOWER(tipo) LIKE ? OR LOWER(status) LIKE ?)"
+        wildcard = f"%{pesquisa}%"
+        params.extend([wildcard, wildcard, wildcard])
+
+    query += " ORDER BY data ASC"
+    cursor.execute(query, params)
     avisos = cursor.fetchall()
     conn.close()
-    if pesquisa:
-        avisos = [a for a in avisos if pesquisa in a['nome'].lower() or pesquisa in a['tipo'].lower()]
+
     hoje = date.today().isoformat()
-    return render_template('contas.html', avisos=avisos, hoje=hoje)
+    return render_template('contas.html', avisos=avisos, hoje=hoje, periodo=periodo, pesquisa=pesquisa, tipo=tipo)
 
 
 @app.route('/excluir_aviso/<int:id>')
@@ -669,21 +1009,22 @@ def editar_metas():
 
 @app.route("/calendario")
 def calendario():
+
     if "user_id" not in session:
         flash("Você não está autenticado.", "error")
         return redirect(url_for("index"))
 
     conn = conectar_bd()
-    conn.row_factory = sqlite3.Row  # Garante acesso via nomes de coluna
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # -------------------------------
-    # PARÂMETROS DO FILTRO
-    # -------------------------------
     tipo = request.args.get("tipo", "intervalo")
-    categoria_filtro = request.args.get("categoria", "todas")
+
+    categoria_filtro = request.args.get("categoria", "")
+    busca = request.args.get("busca", "")
 
     hoje = date.today()
+
     inicio = request.args.get("inicio")
     fim = request.args.get("fim")
     dia = request.args.get("dia")
@@ -691,134 +1032,255 @@ def calendario():
     ano = request.args.get("ano")
     semana = request.args.get("semana")
 
-    # -------------------------------
-    # INTERVALO SELECIONADO
-    # -------------------------------
-    dt_inicio = dt_fim = hoje
+    dt_inicio = hoje
+    dt_fim = hoje
+
+
+    # -------------------
+    # INTERVALO
+    # -------------------
 
     if tipo == "intervalo" and inicio and fim:
-        dt_inicio = datetime.strptime(inicio, "%Y-%m-%d").date()
-        dt_fim = datetime.strptime(fim, "%Y-%m-%d").date()
+
+        dt_inicio = datetime.strptime(
+            inicio,
+            "%Y-%m-%d"
+        ).date()
+
+        dt_fim = datetime.strptime(
+            fim,
+            "%Y-%m-%d"
+        ).date()
+
+
     elif tipo == "diario":
+
         d = dia or hoje.strftime("%Y-%m-%d")
-        dt_inicio = dt_fim = datetime.strptime(d, "%Y-%m-%d").date()
+
+        dt_inicio = dt_fim = datetime.strptime(
+            d,
+            "%Y-%m-%d"
+        ).date()
+
+
     elif tipo == "semanal":
+
         semana = semana or hoje.strftime("%Y-W%W")
+
         ano_s, sem_s = semana.split("-W")
-        dt_inicio = datetime.fromisocalendar(int(ano_s), int(sem_s), 1).date()
-        dt_fim = datetime.fromisocalendar(int(ano_s), int(sem_s), 7).date()
+
+        dt_inicio = datetime.fromisocalendar(
+            int(ano_s),
+            int(sem_s),
+            1
+        ).date()
+
+        dt_fim = datetime.fromisocalendar(
+            int(ano_s),
+            int(sem_s),
+            7
+        ).date()
+
+
     elif tipo == "mensal":
+
         mes = mes or hoje.strftime("%Y-%m")
+
         ano_m, mes_m = map(int, mes.split("-"))
+
         dt_inicio = date(ano_m, mes_m, 1)
-        dt_fim = date(ano_m, mes_m + 1, 1) - timedelta(days=1) if mes_m < 12 else date(ano_m, 12, 31)
+
+        if mes_m < 12:
+            dt_fim = date(
+                ano_m,
+                mes_m + 1,
+                1
+            ) - timedelta(days=1)
+        else:
+            dt_fim = date(ano_m, 12, 31)
+
+
     elif tipo == "anual":
+
         ano = int(ano or hoje.year)
+
         dt_inicio = date(ano, 1, 1)
         dt_fim = date(ano, 12, 31)
 
-    # -------------------------------
-    # BUSCAR TRANSACOES
-    # -------------------------------
+
+    # -------------------
+    # QUERY
+    # -------------------
+
     query = """
-        SELECT tipo, valor, categoria, nome
+        SELECT tipo, valor, categoria, nome, data
         FROM Transacoes
         WHERE usuario_id = ?
         AND DATE(data) BETWEEN ? AND ?
     """
-    params = [session["user_id"], dt_inicio, dt_fim]
 
-    if categoria_filtro != "todas":
+    params = [
+        session["user_id"],
+        dt_inicio,
+        dt_fim
+    ]
+
+
+    # filtro categoria
+
+    if categoria_filtro and categoria_filtro != "todas":
+
         query += " AND categoria = ?"
+
         params.append(categoria_filtro)
 
+
+    # filtro busca
+
+    if busca:
+
+        query += " AND nome LIKE ?"
+
+        params.append(f"%{busca}%")
+
+
     cursor.execute(query, params)
+
     transacoes = cursor.fetchall()
 
-    total_rendas = sum(t["valor"] for t in transacoes if t["tipo"] == "renda")
-    total_gastos = sum(t["valor"] for t in transacoes if t["tipo"] == "gasto")
+
+    # -------------------
+    # TOTAIS
+    # -------------------
+
+    total_rendas = sum(
+        t["valor"]
+        for t in transacoes
+        if t["tipo"].lower() == "renda"
+    )
+
+    total_gastos = sum(
+        t["valor"]
+        for t in transacoes
+        if t["tipo"].lower() == "gasto"
+    )
+
     saldo = total_rendas - total_gastos
 
-    # -------------------------------
-    # METAS DO USUÁRIO
-    # -------------------------------
-    cursor.execute("SELECT * FROM Configuracoes LIMIT 1")
+
+    # -------------------
+    # CONFIG
+    # -------------------
+
+    cursor.execute(
+        "SELECT * FROM Configuracoes LIMIT 1"
+    )
+
     row = cursor.fetchone()
+
     config = dict(row) if row else {}
 
-    categorias = ["necessidades", "lazer", "causas_sociais", "reserva", "investimento"]
 
-    metas = {cat: total_rendas * (config.get(cat, 0)/100) for cat in categorias}
+    categorias = [
+        "necessidades",
+        "lazer",
+        "causas_sociais",
+        "reserva",
+        "investimento"
+    ]
 
-    # -------------------------------
-    # SOMA REAL DE GASTOS POR CATEGORIA
-    # -------------------------------
-    gastos = {cat: 0 for cat in categorias}
+
+    metas = {
+
+        c:
+        total_rendas *
+        (config.get(c, 0) / 100)
+
+        for c in categorias
+
+    }
+
+
+    gastos = {c: 0 for c in categorias}
+
+
     for t in transacoes:
-        if t["tipo"] == "gasto" and t["categoria"] in gastos:
+
+        if (
+            t["tipo"] == "gasto"
+            and t["categoria"] in gastos
+        ):
             gastos[t["categoria"]] += t["valor"]
 
-    # -------------------------------
-    # COMPARAÇÃO PARA GRÁFICO
-    # -------------------------------
+
     comparacao = {
-        cat: {
-            "meta": metas[cat],
-            "gasto": gastos[cat],
-            "status": "dentro" if gastos[cat] <= metas[cat] else "excedido",
+
+        c: {
+
+            "meta": metas[c],
+
+            "gasto": gastos[c],
+
+            "status":
+                "dentro"
+                if gastos[c] <= metas[c]
+                else "excedido"
+
         }
-        for cat in categorias
+
+        for c in categorias
+
     }
 
-    # -------------------------------
-    # GRAFICO FINAL
-    # -------------------------------
-    cores = ["#4e73df", "#1cc88a", "#36b9cc", "#f6c23e", "#e74a3b"]
+
     grafico_data = json.dumps({
-        "categorias": [c.capitalize() for c in categorias],
-        "gastos": [gastos[c] for c in categorias],
-        "metas": [metas[c] for c in categorias],
-        "cores": cores,
+
+        "categorias":
+            [c.capitalize() for c in categorias],
+
+        "gastos":
+            [gastos[c] for c in categorias],
+
+        "metas":
+            [metas[c] for c in categorias]
+
     })
 
-    # -------------------------------
-    # GRAFICO DE ITENS INDIVIDUAIS
-    # -------------------------------
-    itens_transacoes = transacoes  # já pegamos todas as transações no filtro acima
-
-    itens_individuais = {
-        "labels": [t["nome"] for t in transacoes if t["tipo"]=="gasto"],
-        "valores": [t["valor"] for t in transacoes if t["tipo"]=="gasto"],
-        "categorias": [t["categoria"] for t in transacoes if t["tipo"]=="gasto"],
-        "cores": [
-            "#4e73df" if t["categoria"]=="necessidades" else
-            "#1cc88a" if t["categoria"]=="lazer" else
-            "#36b9cc" if t["categoria"]=="causas_sociais" else
-            "#f6c23e" if t["categoria"]=="reserva" else
-            "#e74a3b"
-            for t in transacoes if t["tipo"]=="gasto"
-        ],
-        "tipos": [t["tipo"] for t in transacoes]  # necessário para JS
-    }
 
     conn.close()
 
-    return render_template(
-        "calendario.html",
-        filtro_ativo=True,
-        total_rendas=total_rendas,
-        total_gastos=total_gastos,
-        saldo=saldo,
-        comparacao=comparacao,
-        grafico_data=grafico_data,
-        dt_inicio=dt_inicio,
-        dt_fim=dt_fim,
-        tipo=tipo,
-        categoria_filtro=categoria_filtro,
-        categorias_disponiveis=categorias,
-        itens_individuais=itens_individuais
-    )
 
+    return render_template(
+
+    "calendario.html",
+
+    total_rendas=total_rendas,
+    total_gastos=total_gastos,
+    saldo=saldo,
+
+    comparacao=comparacao,
+    grafico_data=grafico_data,
+
+    dt_inicio=dt_inicio,
+    dt_fim=dt_fim,
+
+    tipo=tipo,
+
+    categoria=categoria_filtro,
+    busca=busca,
+
+    categorias=categorias,
+
+    transacoes=transacoes,   
+    
+    filtro_ativo=True
+)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("Logout realizado", "success")
+    return redirect(url_for("index"))
 # =====================================================
 # Execução do Aplicativo (LOCAL APENAS)
 # =====================================================

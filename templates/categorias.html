@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Categorias Personalizadas{% endblock %}
+{% block content %}
+  <div class="py-2">
+    <h1 class="mb-4">Categorias Personalizadas</h1>
+    <div class="card mb-4 shadow-sm">
+      <div class="card-body">
+        <form method="POST" action="/categorias" class="row g-3">
+          <div class="col-md-5">
+            <label class="form-label">Item / Termo</label>
+            <input name="termo" class="form-control" placeholder="Ex: comida, mercado, cdb, poupança" required>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Categoria</label>
+            <select name="categoria" class="form-select" required>
+              <option value="">Selecione</option>
+              <option value="necessidades">Necessidades</option>
+              <option value="lazer">Lazer</option>
+              <option value="investimento">Investimento</option>
+              <option value="reserva">Reserva</option>
+              <option value="causas_sociais">Causas Sociais</option>
+              <option value="renda">Renda</option>
+            </select>
+          </div>
+          <div class="col-md-2 d-grid">
+            <button type="submit" class="btn btn-success">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="table-responsive shadow-sm">
+      <table class="table table-striped">
+        <thead><tr><th>ID</th><th>Termo</th><th>Categoria</th><th>Ações</th></tr></thead>
+        <tbody>
+          {% for cat in categorias %}
+            <tr>
+              <td>{{ cat.id }}</td>
+              <td>{{ cat.termo }}</td>
+              <td>{{ cat.categoria }}</td>
+              <td>
+                <a class="btn btn-danger btn-sm" href="/categorias/excluir/{{ cat.id }}" onclick="return confirm('Tem certeza?')">Excluir</a>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-center">Nenhuma categoria personalizada cadastrada.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

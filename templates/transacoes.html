@@ -1,14 +1,47 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transações - Gastos e Rendas</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-  <!-- Barra de Navegação -->
+{% extends 'base.html' %}
+{% block title %}Transações{% endblock %}
+{% block content %}
+  <div class="py-2">
+    <h1 class="mb-4">Transações - Gastos e Rendas</h1>
+    <form class="row g-3 mb-3" method="GET" action="/transacoes">
+      <div class="col-md-3"><input type="text" name="pesquisa" value="{{ pesquisa|default('') }}" class="form-control" placeholder="Buscar por nome, tipo ou categoria"></div>
+      <div class="col-md-2"><select name="periodo" class="form-select"><option value="">Período (Todos)</option><option value="diario" {% if periodo == 'diario' %}selected{% endif %}>Diário</option><option value="semanal" {% if periodo == 'semanal' %}selected{% endif %}>Semanal</option><option value="mensal" {% if periodo == 'mensal' %}selected{% endif %}>Mensal</option><option value="anual" {% if periodo == 'anual' %}selected{% endif %}>Anual</option></select></div>
+      <div class="col-md-2"><select name="categoria" class="form-select"><option value="todas" {% if categoria == 'todas' %}selected{% endif %}>Todas Categorias</option><option value="necessidades" {% if categoria == 'necessidades' %}selected{% endif %}>Necessidades</option><option value="lazer" {% if categoria == 'lazer' %}selected{% endif %}>Lazer</option><option value="causas_sociais" {% if categoria == 'causas_sociais' %}selected{% endif %}>Causas Sociais</option><option value="reserva" {% if categoria == 'reserva' %}selected{% endif %}>Reserva</option><option value="investimento" {% if categoria == 'investimento' %}selected{% endif %}>Investimento</option><option value="renda" {% if categoria == 'renda' %}selected{% endif %}>Renda</option></select></div>
+      <div class="col-md-2"><button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-search"></i> Filtrar</button></div>
+      <div class="col-md-3"><a href="/transacoes" class="btn btn-outline-secondary w-100"><i class="fa-solid fa-sync"></i> Limpar</a></div>
+    </form>
+
+    <a href="/adicionar_transacao" class="btn btn-success mb-3"><i class="fa-solid fa-plus"></i> Adicionar Transação</a>
+
+    {% if transacoes %}
+      <div class="table-responsive">
+        <table class="table table-bordered" id="transacoesTable">
+          <thead><tr><th>ID</th><th>Tipo</th><th>Nome</th><th>Valor</th><th>Período</th><th>Categoria</th><th>Data</th><th>Ações</th></tr></thead>
+          <tbody>
+            {% for t in transacoes %}
+            <tr><td>{{ t.id }}</td><td>{{ t.tipo }}</td><td>{{ t.nome }}</td><td>R$ {{ t.valor }}</td><td>{{ t.periodo }}</td><td>{{ t.categoria }}</td><td>{{ t.data }}</td><td><a href="/editar_transacao/{{ t.id }}" class="btn btn-warning btn-sm"><i class="fa-solid fa-edit"></i></a> <a href="/excluir_transacao/{{ t.id }}" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza?')"><i class="fa-solid fa-trash"></i></a></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted">Nenhuma transação encontrada.</p>
+    {% endif %}
+  </div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const searchInput = document.getElementById('searchInput');
+  if(searchInput){
+    searchInput.addEventListener('keyup', function(){
+      const filter = this.value.toLowerCase();
+      const rows = document.querySelectorAll('#transacoesTable tbody tr');
+      rows.forEach(row => {const nome = row.cells[2].textContent.toLowerCase(); row.style.display = nome.includes(filter) ? '' : 'none';});
+    });
+  }
+</script>
+{% endblock %}
+
 
   <!-- NAVBAR -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
@@ -49,23 +82,38 @@
 
   <div class="container py-5">
     <h1 class="mb-4">Transações - Gastos e Rendas</h1>
-    
-    <!-- Filtros de Período -->
-    <div class="mb-3">
-      <label class="form-label">Filtrar por Período:</label>
-      <div class="btn-group" role="group">
-        <a href="/transacoes?periodo=diario" class="btn btn-outline-primary">Diário</a>
-        <a href="/transacoes?periodo=semanal" class="btn btn-outline-primary">Semanal</a>
-        <a href="/transacoes?periodo=mensal" class="btn btn-outline-primary">Mensal</a>
-        <a href="/transacoes?periodo=anual" class="btn btn-outline-primary">Anual</a>
-        <a href="/transacoes" class="btn btn-outline-secondary">Todos</a>
+
+    <form class="row g-3 mb-3" method="GET" action="/transacoes">
+      <div class="col-md-3">
+        <input type="text" name="pesquisa" value="{{ pesquisa|default('') }}" class="form-control" placeholder="Buscar por nome, tipo ou categoria">
       </div>
-    </div>
-    
-    <!-- Campo de Pesquisa -->
-    <div class="mb-3">
-      <input type="text" id="searchInput" class="form-control" placeholder="Pesquisar por nome...">
-    </div>
+      <div class="col-md-2">
+        <select name="periodo" class="form-select">
+          <option value="">Período (Todos)</option>
+          <option value="diario" {% if periodo == 'diario' %}selected{% endif %}>Diário</option>
+          <option value="semanal" {% if periodo == 'semanal' %}selected{% endif %}>Semanal</option>
+          <option value="mensal" {% if periodo == 'mensal' %}selected{% endif %}>Mensal</option>
+          <option value="anual" {% if periodo == 'anual' %}selected{% endif %}>Anual</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select name="categoria" class="form-select">
+          <option value="todas" {% if categoria == 'todas' %}selected{% endif %}>Todas Categorias</option>
+          <option value="necessidades" {% if categoria == 'necessidades' %}selected{% endif %}>Necessidades</option>
+          <option value="lazer" {% if categoria == 'lazer' %}selected{% endif %}>Lazer</option>
+          <option value="causas_sociais" {% if categoria == 'causas_sociais' %}selected{% endif %}>Causas Sociais</option>
+          <option value="reserva" {% if categoria == 'reserva' %}selected{% endif %}>Reserva</option>
+          <option value="investimento" {% if categoria == 'investimento' %}selected{% endif %}>Investimento</option>
+          <option value="renda" {% if categoria == 'renda' %}selected{% endif %}>Renda</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-search"></i> Filtrar</button>
+      </div>
+      <div class="col-md-3 text-end">
+        <a href="/transacoes" class="btn btn-outline-secondary w-100"><i class="fa-solid fa-sync"></i> Limpar</a>
+      </div>
+    </form>
     
     <a href="/adicionar_transacao" class="btn btn-success mb-3">
       <i class="fa-solid fa-plus"></i> Adicionar Transação

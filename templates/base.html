@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>{% block title %}Sistema Financeiro{% endblock %}</title>
+
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<!-- CSS do projeto -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+{% block head %}{% endblock %}
+
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+
+{% if session.get('user_id') and request.endpoint not in ['index','login','cadastro','cadastro_admin'] %}
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+<div class="container">
+
+<a class="navbar-brand d-flex align-items-center"
+   href="{{ url_for('dashboard') }}">
+
+<i class="fa-solid fa-piggy-bank me-2"></i>
+Controle Financeiro
+
+</a>
+
+<button class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarNav">
+
+<span class="navbar-toggler-icon"></span>
+</button>
+
+<div class="collapse navbar-collapse" id="navbarNav">
+
+<ul class="navbar-nav ms-auto align-items-lg-center">
+
+<li class="nav-item">
+<a class="nav-link {% if request.endpoint == 'calendario' %}active{% endif %}"
+   href="{{ url_for('calendario') }}">
+<i class="fa-solid fa-calendar me-1"></i>
+Calendário
+</a>
+</li>
+
+<li class="nav-item">
+<a class="nav-link {% if request.endpoint == 'contas' %}active{% endif %}"
+   href="{{ url_for('contas') }}">
+<i class="fa-solid fa-wallet me-1"></i>
+Contas
+</a>
+</li>
+
+<li class="nav-item">
+<a class="nav-link {% if request.endpoint == 'transacoes' %}active{% endif %}"
+ href="{{ url_for('transacoes_view') }}">
+<i class="fa-solid fa-list me-1"></i>
+Transações
+</a>
+</li>
+
+<li class="nav-item">
+<a class="nav-link {% if request.endpoint == 'categorias' %}active{% endif %}"
+   href="{{ url_for('categorias') }}">
+<i class="fa-solid fa-tags me-1"></i>
+Categorias
+</a>
+</li>
+
+{% if session.get('role') == 'admin' %}
+<li class="nav-item">
+<a class="nav-link {% if request.endpoint == 'gestao_usuarios' %}active{% endif %}"
+   href="{{ url_for('gestao_usuarios') }}">
+<i class="fa-solid fa-users-gear me-1"></i>
+Usuários
+</a>
+</li>
+{% endif %}
+
+<li class="nav-item ms-lg-3 mt-2 mt-lg-0">
+<a href="{{ url_for('logout') }}"
+   class="btn btn-light text-primary fw-bold">
+<i class="fa-solid fa-right-from-bracket me-1"></i>
+Sair
+</a>
+</li>
+
+</ul>
+</div>
+</div>
+</nav>
+
+{% endif %}
+
+
+<!-- CONTEÚDO -->
+<main class="container py-4 flex-grow-1">
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+
+<div class="alert alert-{{ 'danger' if category=='error' else category }}
+alert-dismissible fade show shadow-sm">
+
+<i class="fa-solid fa-circle-info me-2"></i>
+{{ message }}
+
+<button type="button"
+class="btn-close"
+data-bs-dismiss="alert"></button>
+
+</div>
+
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+{% block content %}
+{% endblock %}
+
+</main>
+
+
+<!-- FOOTER -->
+<footer class="text-center py-3 text-white bg-primary mt-auto">
+
+<div class="container">
+© 2026 Arnaldo Rocha Filho • Sistema Financeiro Inteligente
+</div>
+
+</footer>
+
+
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+{% block scripts %}
+{% endblock %}
+
+</body>
+</html>

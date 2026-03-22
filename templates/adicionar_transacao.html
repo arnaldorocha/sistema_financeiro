@@ -1,167 +1,135 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Adicionar Transação</title>
+{% extends 'base.html' %}
 
-  <!-- Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+{% block title %}Adicionar Transação{% endblock %}
 
-  <!-- Font Awesome -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+{% block head %}
+<style>
+  .hidden {
+    display: none !important;
+  }
 
-  <!-- CSS Global -->
-  <link rel="stylesheet" href="/static/css/style.css">
+  .card {
+    border-radius: 14px;
+  }
 
-  <style>
-    .hidden { display: none !important; }
-  </style>
-</head>
+  .card-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
 
-<body class="bg-light">
+  .form-label {
+    font-weight: 600;
+  }
 
-  <!-- NAVBAR -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
-    <div class="container">
-      <a class="navbar-brand d-flex align-items-center" href="/dashboard">
-        <i class="fa-solid fa-piggy-bank me-2"></i> Controle Financeiro
-      </a>
+  .btn-primary {
+    font-weight: 600;
+    padding: 10px;
+  }
+</style>
+{% endblock %}
 
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
+{% block content %}
+<div class="container mt-5">
 
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ms-auto align-items-lg-center">
+  <div class="card shadow">
 
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('calendario') }}">
-              <i class="fa-solid fa-chart-pie"></i> Calendário
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('contas') }}">
-              <i class="fa-solid fa-file-invoice-dollar"></i> Contas
-            </a>
-          </li>
-
-          <li class="nav-item mt-2 mt-lg-0">
-            <a href="/transacoes" class="btn btn-light text-primary fw-bold w-100">
-              <i class="fa-solid fa-list"></i> Transações
-            </a>
-          </li>
-
-        </ul>
-      </div>
-    </div>
-  </nav>
-
-  <!-- CONTAINER -->
-  <div class="container mt-5">
-
-    <div class="card shadow">
-      <div class="card-header bg-primary text-white">
-        <h3 class="mb-0">
-          <i class="fa-solid fa-plus"></i> Adicionar Transação
-        </h3>
-      </div>
-
-      <div class="card-body">
-
-        <form action="{{ url_for('adicionar_transacao') }}" method="post">
-
-          <!-- Tipo -->
-          <div class="mb-3">
-            <label class="form-label fw-bold">Tipo de Transação</label>
-            <select class="form-select" id="tipo" name="tipo" required>
-              <option value="" disabled selected>Selecione...</option>
-              <option value="gasto">Gasto</option>
-              <option value="renda">Renda</option>
-            </select>
-          </div>
-
-          <!-- Nome -->
-          <div class="mb-3">
-            <label class="form-label fw-bold">Nome</label>
-            <input type="text" class="form-control" name="nome" required>
-          </div>
-
-          <!-- Valor -->
-          <div class="mb-3">
-            <label class="form-label fw-bold">Valor</label>
-            <input type="number" step="0.01" class="form-control" name="valor" required>
-          </div>
-
-          <!-- Categoria -->
-          <div class="mb-3">
-            <label class="form-label fw-bold">Categoria</label>
-            <select class="form-select" id="categoria" name="categoria" required>
-              <option value="" disabled selected>Selecione...</option>
-              <option value="necessidades">Necessidades</option>
-              <option value="lazer">Lazer</option>
-              <option value="investimento">Investimento</option>
-              <option value="reserva">Reserva</option>
-              <option value="causas_sociais">Causa Social</option>
-              <option value="renda">Renda</option>
-            </select>
-          </div>
-
-          <!-- Período (somente gastos) -->
-          <div id="periodo-grupo" class="mb-3 hidden">
-            <label class="form-label fw-bold">Período</label>
-            <select class="form-select" id="periodo" name="periodo">
-              <option value="" disabled selected>Selecione...</option>
-              <option value="diario">Diário</option>
-              <option value="semanal">Semanal</option>
-              <option value="mensal">Mensal</option>
-              <option value="anual">Anual</option>
-            </select>
-          </div>
-
-          <!-- Data -->
-          <div class="mb-3">
-            <label class="form-label fw-bold">Data</label>
-            <input type="date" class="form-control" name="data" required>
-          </div>
-
-          <button class="btn btn-primary w-100 fw-bold">
-            <i class="fa-solid fa-check"></i> Adicionar Transação
-          </button>
-
-        </form>
-
-      </div>
+    <div class="card-header bg-primary text-white">
+      <i class="fa-solid fa-plus"></i> Adicionar Transação
     </div>
 
+    <div class="card-body">
+
+      <form action="{{ url_for('adicionar_transacao') }}" method="post">
+
+        <!-- Tipo -->
+        <div class="mb-3">
+          <label class="form-label">Tipo de Transação</label>
+          <select class="form-select" id="tipo" name="tipo" required>
+            <option value="" disabled selected>Selecione...</option>
+            <option value="gasto">Gasto</option>
+            <option value="renda">Renda</option>
+          </select>
+        </div>
+
+        <!-- Nome -->
+        <div class="mb-3">
+          <label class="form-label">Nome</label>
+          <input type="text" class="form-control" name="nome" required>
+        </div>
+
+        <!-- Valor -->
+        <div class="mb-3">
+          <label class="form-label">Valor</label>
+          <input type="number" step="0.01" class="form-control" name="valor" required>
+        </div>
+
+        <!-- Categoria -->
+        <div class="mb-3">
+          <label class="form-label">Categoria</label>
+          <select class="form-select" id="categoria" name="categoria" required>
+            <option value="" disabled selected>Selecione...</option>
+            <option value="auto">Auto (classificação automática)</option>
+            <option value="necessidades">Necessidades</option>
+            <option value="lazer">Lazer</option>
+            <option value="investimento">Investimento</option>
+            <option value="reserva">Reserva</option>
+            <option value="causas_sociais">Causa Social</option>
+            <option value="renda">Renda</option>
+          </select>
+          <div class="form-text">
+            Escolha "Auto" para usar categorias inteligentes.
+          </div>
+        </div>
+
+        <!-- Período -->
+        <div id="periodo-grupo" class="mb-3 hidden">
+          <label class="form-label">Período</label>
+          <select class="form-select" id="periodo" name="periodo">
+            <option value="" disabled selected>Selecione...</option>
+            <option value="diario">Diário</option>
+            <option value="semanal">Semanal</option>
+            <option value="mensal">Mensal</option>
+            <option value="anual">Anual</option>
+          </select>
+        </div>
+
+        <!-- Data -->
+        <div class="mb-3">
+          <label class="form-label">Data</label>
+          <input type="date" class="form-control" name="data" value="{{ hoje }}" required>
+        </div>
+
+        <button class="btn btn-primary w-100">
+          <i class="fa-solid fa-check"></i> Adicionar Transação
+        </button>
+
+      </form>
+
+    </div>
   </div>
 
-  <!-- FOOTER -->
-  <footer class="bg-primary text-white text-center py-3 mt-4">
-    <p class="mb-0">&copy; 2025 Arnaldo Rocha Filho. Todos os direitos reservados.</p>
-  </footer>
+</div>
+{% endblock %}
 
-  <!-- Scripts -->
-  <script>
-    const tipo = document.getElementById("tipo");
-    const periodoGrupo = document.getElementById("periodo-grupo");
-    const campoPeriodo = document.getElementById("periodo");
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
 
-    tipo.addEventListener("change", function () {
+  const tipo = document.getElementById("tipo");
+  const periodoGrupo = document.getElementById("periodo-grupo");
+  const campoPeriodo = document.getElementById("periodo");
 
-      if (this.value === "renda") {
-        periodoGrupo.classList.add("hidden");
-        campoPeriodo.required = false;
-      } else {
-        periodoGrupo.classList.remove("hidden");
-        campoPeriodo.required = true;
-      }
+  tipo.addEventListener("change", function() {
+    if (this.value === "renda") {
+      periodoGrupo.classList.add("hidden");
+      campoPeriodo.required = false;
+      campoPeriodo.value = "";
+    } else {
+      periodoGrupo.classList.remove("hidden");
+      campoPeriodo.required = true;
+    }
+  });
 
-    });
-  </script>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-</body>
-</html>
+});
+</script>
+{% endblock %}

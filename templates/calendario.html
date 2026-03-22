@@ -1,383 +1,316 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Calendário - Dashboard</title>
+{% extends 'base.html' %}
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body { background:#f8f9fa; }
-    #metasChart, #itensChart { max-height:420px; width:100%!important; }
-    .chart-controls .btn { min-width:96px; }
-    .hidden { display:none !important; }
-    .chart-btn.active { border-color: #4e73df; transform: scale(1.1); }
-  </style>
-</head>
-<body>
+{% block title %}
+Calendário - Dashboard
+{% endblock %}
 
-<!-- NAVBAR -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
-  <div class="container">
-    <a class="navbar-brand d-flex align-items-center" href="/dashboard">
-      <i class="fa-solid fa-piggy-bank me-2"></i> Controle Financeiro
-    </a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav ms-auto align-items-lg-center">
-        <li class="nav-item">
-          <a class="nav-link text-white" href="{{ url_for('calendario') }}">
-            <i class="fa-solid fa-chart-pie"></i> Calendário
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link text-white" href="{{ url_for('contas') }}">
-            <i class="fa-solid fa-file-invoice-dollar"></i> Contas
-          </a>
-        </li>
-        <li class="nav-item mt-2 mt-lg-0">
-          <a href="/transacoes" class="btn btn-light text-primary fw-bold w-100">
-            <i class="fa-solid fa-plus"></i> Transações
-          </a>
-        </li>
-      </ul>
-    </div>
-  </div>
-</nav>
+{% block head %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+.hidden { display:none; }
+
+.card {
+  border-radius:14px;
+  border:none;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08);
+}
+
+.title {
+  font-weight:700;
+  font-size:1.6rem;
+}
+
+.btn-chart {
+  margin-right:6px;
+}
+
+/* Centraliza gráficos */
+#chartContainer {
+  display: flex;
+  justify-content: center;
+}
+
+/* Altura dos gráficos */
+.chart-bar, .chart-pareto { height:400px !important; }
+.chart-pie { height:300px !important; }
+
+</style>
+
+{% endblock %}
+
+{% block content %}
 
 <div class="container py-4">
-<h2 class="text-primary mb-3">Dashboard por Intervalo de Datas</h2>
 
-<form method="GET" action="/calendario" class="card p-3 shadow-sm mb-4">
-  <div class="row g-3">
-    <div class="col-md-3">
-      <label class="form-label fw-semibold">Tipo</label>
-      <select id="selectTipo" name="tipo" class="form-select">
-        <option value="diario" {% if tipo=='diario' %}selected{% endif %}>Diário</option>
-        <option value="semanal" {% if tipo=='semanal' %}selected{% endif %}>Semanal</option>
-        <option value="mensal" {% if tipo=='mensal' %}selected{% endif %}>Mensal</option>
-        <option value="anual" {% if tipo=='anual' %}selected{% endif %}>Anual</option>
-        <option value="intervalo" {% if tipo=='intervalo' %}selected{% endif %}>Intervalo</option>
-      </select>
-    </div>
+<h2 class="title text-primary mb-4">
+Dashboard por Filtros
+</h2>
 
-    <div id="campoDia" class="col-md-3 hidden">
-      <label class="form-label fw-semibold">Dia</label>
-      <input type="date" name="dia" class="form-control" value="{{ dt_inicio }}">
-    </div>
+<form method="GET" action="/calendario" class="card p-3 mb-4">
+<div class="row g-3">
 
-    <div id="campoSemana" class="col-md-3 hidden">
-      <label class="form-label fw-semibold">Semana</label>
-      <input type="week" name="semana" class="form-control">
-    </div>
+<div class="col-md-2">
+<label>Tipo</label>
+<select id="selectTipo" name="tipo" class="form-select">
+  <option value="diario" {% if tipo=='diario' %}selected{% endif %}>Diário</option>
+  <option value="semanal" {% if tipo=='semanal' %}selected{% endif %}>Semanal</option>
+  <option value="mensal" {% if tipo=='mensal' %}selected{% endif %}>Mensal</option>
+  <option value="anual" {% if tipo=='anual' %}selected{% endif %}>Anual</option>
+  <option value="intervalo" {% if tipo=='intervalo' %}selected{% endif %}>Intervalo</option>
+</select>
+</div>
 
-    <div id="campoMes" class="col-md-3 hidden">
-      <label class="form-label fw-semibold">Mês</label>
-      <input type="month" name="mes" class="form-control">
-    </div>
+<div class="col-md-2">
+<label>Categoria</label>
+<select name="categoria" class="form-select">
+<option value="">Todas</option>
+{% for c in categorias %}
+<option value="{{ c }}" {% if categoria==c %}selected{% endif %}>
+{{ c }}
+</option>
+{% endfor %}
+</select>
+</div>
 
-    <div id="campoAno" class="col-md-3 hidden">
-      <label class="form-label fw-semibold">Ano</label>
-      <input type="number" name="ano" min="1900" max="2100" value="{{ dt_inicio.year }}" class="form-control">
-    </div>
+<div class="col-md-3">
+<label>Buscar</label>
+<input type="text" name="busca" class="form-control" value="{{ busca }}">
+</div>
 
-    <div id="campoInicio" class="col-md-3 hidden">
-      <label class="form-label fw-semibold">Início</label>
-      <input type="date" name="inicio" class="form-control" value="{{ dt_inicio }}">
-    </div>
+<div id="campoDia" class="col-md-2 hidden">
+<input type="date" name="dia" class="form-control">
+</div>
 
-    <div id="campoFim" class="col-md-3 hidden">
-      <label class="form-label fw-semibold">Fim</label>
-      <input type="date" name="fim" class="form-control" value="{{ dt_fim }}">
-    </div>
+<div id="campoSemana" class="col-md-2 hidden">
+<input type="week" name="semana" class="form-control">
+</div>
 
-    <div class="col-12">
-      <button class="btn btn-primary w-100">Aplicar</button>
-    </div>
-  </div>
+<div id="campoMes" class="col-md-2 hidden">
+<input type="month" name="mes" class="form-control">
+</div>
+
+<div id="campoAno" class="col-md-2 hidden">
+<input type="number" name="ano" class="form-control">
+</div>
+
+<div id="campoInicio" class="col-md-2 hidden">
+<input type="date" name="inicio" class="form-control" value="{{ dt_inicio }}">
+</div>
+
+<div id="campoFim" class="col-md-2 hidden">
+<input type="date" name="fim" class="form-control" value="{{ dt_fim }}">
+</div>
+
+<div class="col-md-1">
+<button class="btn btn-primary w-100">OK</button>
+</div>
+
+</div>
 </form>
 
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <div class="btn-group w-100">
-      <a href="?tipo=diario" class="btn btn-outline-primary {% if tipo=='diario' %}active{% endif %}">Diário</a>
-      <a href="?tipo=semanal" class="btn btn-outline-primary {% if tipo=='semanal' %}active{% endif %}">Semanal</a>
-      <a href="?tipo=mensal" class="btn btn-outline-primary {% if tipo=='mensal' %}active{% endif %}">Mensal</a>
-      <a href="?tipo=anual" class="btn btn-outline-primary {% if tipo=='anual' %}active{% endif %}">Anual</a>
-      <a href="?tipo=intervalo" class="btn btn-outline-primary {% if tipo=='intervalo' %}active{% endif %}">Intervalo</a>
-    </div>
-  </div>
-</div>
-
 {% if filtro_ativo %}
+
 <div class="row mb-4">
   <div class="col-md-4">
-    <div class="card shadow-sm">
-      <div class="card-body text-center">
-        <h6>Total Rendas</h6>
-        <h4 class="text-success">R$ {{ '%.2f'|format(total_rendas) }}</h4>
-      </div>
+    <div class="card text-center p-3">
+      Total Rendas
+      <h4 class="text-success">R$ {{ "%.2f"|format(total_rendas) }}</h4>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card shadow-sm">
-      <div class="card-body text-center">
-        <h6>Total Gastos</h6>
-        <h4 class="text-danger">R$ {{ '%.2f'|format(total_gastos) }}</h4>
-      </div>
+    <div class="card text-center p-3">
+      Total Gastos
+      <h4 class="text-danger">R$ {{ "%.2f"|format(total_gastos) }}</h4>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card shadow-sm">
-      <div class="card-body text-center">
-        <h6>Saldo</h6>
-        <h4 class="text-primary">R$ {{ '%.2f'|format(saldo) }}</h4>
-      </div>
+    <div class="card text-center p-3">
+      Saldo
+      <h4 class="text-primary">R$ {{ "%.2f"|format(saldo) }}</h4>
     </div>
   </div>
 </div>
 
-<div class="card shadow-sm mb-4">
-  <div class="card-header bg-primary text-white">Metas vs Gastos</div>
-  <div class="card-body">
-    <div class="table-responsive mb-3">
-      <table class="table table-striped">
-        <thead>
-          <tr><th>Categoria</th><th>Meta (R$)</th><th>Gasto (R$)</th><th>Status</th></tr>
-        </thead>
-        <tbody>
-          {% for cat, d in comparacao.items() %}
-          <tr>
-            <td>{{ cat.capitalize() }}</td>
-            <td>R$ {{ '%.2f'|format(d.meta) }}</td>
-            <td>R$ {{ '%.2f'|format(d.gasto) }}</td>
-            <td>
-              {% if d.status == 'dentro' %}
-                <span class="badge bg-success">Dentro</span>
-              {% else %}
-                <span class="badge bg-danger">Excedida</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+<div class="card mb-4">
+<div class="card-body">
 
-    <div class="d-flex justify-content-between mb-2 chart-controls">
-      <div>
-        <button class="btn btn-outline-primary" id="btnBar">Barra</button>
-        <button class="btn btn-outline-primary" id="btnPie">Pizza</button>
-        <button class="btn btn-outline-primary" id="btnPareto">Pareto</button>
-        <button class="btn btn-outline-primary" id="btnItens">Gráfico por Itens</button>
-      </div>
-    </div>
-
-    <canvas id="metasChart"></canvas>
-
-    <div id="itensChartContainer" class="hidden mt-4">
-      <select id="filtroCategoria" class="form-select mb-2 w-auto">
-        <option value="todas">Todas Categorias</option>
-        {% for cat in ['necessidades','lazer','causas_sociais','reserva','investimento'] %}
-        <option value="{{ cat }}">{{ cat.replace('_',' ').capitalize() }}</option>
-        {% endfor %}
-      </select>
-
-      <canvas id="itensChart"></canvas>
-
-      <div id="tabelaItens" class="mt-3 table-responsive">
-        <table class="table table-striped">
-          <thead>
-            <tr><th>Item</th><th>Categoria</th><th>Valor (R$)</th></tr>
-          </thead>
-          <tbody>
-            <tr id="noItemsRow" class="text-center {% if itens_individuais.labels|length > 0 %}d-none{% endif %}">
-              <td colspan="3">Nenhum item registrado</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </div>
+<div class="mb-3 text-center">
+  <button class="btn btn-outline-primary btn-chart" id="btnBar">Barra</button>
+  <button class="btn btn-outline-primary btn-chart" id="btnPie">Pizza</button>
+  <button class="btn btn-outline-primary btn-chart" id="btnPareto">Pareto</button>
 </div>
+
+<div id="chartContainer">
+  <canvas id="chart1"></canvas>
+</div>
+
+</div>
+</div>
+
+<div class="card mb-4">
+<div class="card-header bg-dark text-white">
+Movimentos do período
+</div>
+
+<div class="card-body">
+<table class="table table-sm">
+<thead>
+<tr>
+<th>Data</th>
+<th>Nome</th>
+<th>Categoria</th>
+<th>Tipo</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+{% for t in transacoes %}
+<tr>
+<td>{{ t.data }}</td>
+<td>{{ t.nome }}</td>
+<td>{{ t.categoria }}</td>
+<td>
+{% if t.tipo == 'renda' %}
+<span class="text-success">Renda</span>
+{% else %}
+<span class="text-danger">Gasto</span>
+{% endif %}
+</td>
+<td>R$ {{ "%.2f"|format(t.valor) }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+
 {% endif %}
 
-<footer class="bg-primary text-white text-center py-3 mt-4">
-  <p class="mb-0">&copy; 2025 Arnaldo Rocha Filho. Todos os direitos reservados.</p>
-</footer>
+</div>
+{% endblock %}
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
+{% block scripts %}
 <script>
 function atualizarCampos() {
-    const tipo = document.getElementById("selectTipo").value;
-    document.querySelectorAll("#campoDia, #campoSemana, #campoMes, #campoAno, #campoInicio, #campoFim")
-        .forEach(el => el.classList.add("hidden"));
-    if(tipo==="diario") campoDia.classList.remove("hidden");
-    if(tipo==="semanal") campoSemana.classList.remove("hidden");
-    if(tipo==="mensal") campoMes.classList.remove("hidden");
-    if(tipo==="anual") campoAno.classList.remove("hidden");
-    if(tipo==="intervalo") { campoInicio.classList.remove("hidden"); campoFim.classList.remove("hidden"); }
+  const tipo = document.getElementById("selectTipo").value;
+  document.querySelectorAll("#campoDia,#campoSemana,#campoMes,#campoAno,#campoInicio,#campoFim")
+    .forEach(el => el.classList.add("hidden"));
+  if(tipo==="diario") campoDia.classList.remove("hidden");
+  if(tipo==="semanal") campoSemana.classList.remove("hidden");
+  if(tipo==="mensal") campoMes.classList.remove("hidden");
+  if(tipo==="anual") campoAno.classList.remove("hidden");
+  if(tipo==="intervalo") { campoInicio.classList.remove("hidden"); campoFim.classList.remove("hidden"); }
 }
 document.getElementById("selectTipo").addEventListener("change", atualizarCampos);
 document.addEventListener("DOMContentLoaded", atualizarCampos);
 
 {% if filtro_ativo %}
+Chart.defaults.font.family = "Inter, sans-serif";
 const data = JSON.parse('{{ grafico_data | safe }}');
-const ctxMetas = document.getElementById("metasChart").getContext("2d");
-let metasChart = null;
+const ctx1 = document.getElementById("chart1");
+let chart1;
 
-// Função para criar gráfico Metas vs Gastos
-function criarGrafico(tipo="bar") {
-    // Sempre oculta o container de itens
-    document.getElementById("itensChartContainer").classList.add("hidden");
+function criarBar() {
+  if(chart1) chart1.destroy();
+  chart1 = new Chart(ctx1,{
+    type:"bar",
+    data:{
+      labels:data.categorias,
+      datasets:[
+        {label:"Gastos",data:data.gastos, backgroundColor:"rgba(255,99,132,0.7)"},
+        {label:"Metas",data:data.metas, backgroundColor:"rgba(54,162,235,0.7)"}
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false
+    },
+    plugins:[{
+      beforeInit: chart => chart.canvas.classList.add('chart-bar')
+    }]
+  });
+}
 
-    if(metasChart) metasChart.destroy();
-
-    if(tipo === "bar" || tipo === "pie") {
-        metasChart = new Chart(ctxMetas, {
-            type: tipo==="pie"?"pie":"bar",
-            data: {
-                labels: data.categorias,
-                datasets: [
-                    { label:"Gasto (R$)", data:data.gastos, backgroundColor:data.cores },
-                    { label:"Meta (R$)", data:data.metas, backgroundColor:data.cores.map(c=>c+'55') }
-                ]
-            },
-            options:{
-                responsive:true,
-                scales:{ y:{ beginAtZero:true } },
-                plugins:{ legend:{ position:'bottom' } }
+function criarPie() {
+  if(chart1) chart1.destroy();
+  const colors = [
+    "rgba(54,162,235,1)",
+    "rgba(255,99,132,1)",
+    "rgba(255,206,86,1)",
+    "rgba(75,192,192,1)",
+    "rgba(153,102,255,1)"
+  ];
+  const metaColors = colors.map(c => c.replace("1)", "0.3)"));
+  chart1 = new Chart(ctx1,{
+    type:"doughnut",
+    data:{
+      labels:data.categorias,
+      datasets:[
+        {label:"Gastos", data:data.gastos, backgroundColor:colors, borderWidth:1},
+        {label:"Metas", data:data.metas, backgroundColor:metaColors, borderWidth:1}
+      ]
+    },
+    options:{
+      cutout:"50%",
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        tooltip:{
+          callbacks:{
+            label:function(context){
+              let datasetLabel = context.dataset.label || '';
+              let value = context.raw;
+              return datasetLabel + ': R$ ' + value.toFixed(2);
             }
-        });
-    } else if(tipo === "pareto") {
-        // Gráfico Pareto: barras de gastos + linha de meta
-        metasChart = new Chart(ctxMetas, {
-        data: {
-            labels: data.categorias,
-            datasets: [
-                {
-                    type: 'bar',
-                    label: 'Gasto (R$)',
-                    data: data.gastos,
-                    backgroundColor: data.cores,
-                    order: 1
-                },
-                {
-                    type: 'line',
-                    label: 'Meta (R$)',
-                    data: data.metas,
-                    borderColor: 'red',
-                    borderWidth: 2,
-                    fill: false,
-                    tension: 0.2,
-                    pointRadius: 3,
-                    pointBackgroundColor: 'red',
-                    order: 10,  // aumentar order garante que linha fique na frente
-                    yAxisID: 'y' // manter na mesma escala
-                }
-            ]
+          }
         },
-        options: {
-            responsive: true,
-            interaction: { mode: 'index', intersect: false },
-            scales: {
-                y: { beginAtZero:true, title:{ display:true, text:'Valor (R$)' } }
-            },
-            plugins: { legend: { position: 'bottom' } }
+        legend:{
+          display:true,
+          position:'bottom'
         }
-    });
-
-    }
+      }
+    },
+    plugins:[{
+      beforeInit: chart => chart.canvas.classList.add('chart-pie')
+    }]
+  });
 }
 
-document.getElementById("btnBar").onclick = () => criarGrafico("bar");
-document.getElementById("btnPie").onclick = () => criarGrafico("pie");
-document.getElementById("btnPareto").onclick = () => criarGrafico("pareto");
-
-criarGrafico(); // renderiza inicialmente gráfico principal
-
-// --- Gráfico por Itens ---
-{% if itens_individuais is defined and itens_individuais %}
-const itensOrig = JSON.parse('{{ itens_individuais | tojson | safe }}');
-const ctxItens = document.getElementById("itensChart").getContext("2d");
-let itensChart = null;
-const tabelaBody = document.querySelector("#tabelaItens tbody");
-
-function atualizarTabela(filtro) {
-    tabelaBody.innerHTML = "";
-    (itensOrig.labels || []).forEach((label,i)=>{
-        const cat = (itensOrig.categorias[i] || "outros").toLowerCase();
-        if(filtro==="todas" || cat===filtro.toLowerCase()){
-            const valor = itensOrig.valores[i] || 0;
-            const row = `<tr>
-                <td>${label}</td>
-                <td>${cat.replace('_',' ')}</td>
-                <td>R$ ${valor.toFixed(2)}</td>
-            </tr>`;
-            tabelaBody.innerHTML += row;
-        }
-    });
+function criarPareto() {
+  if(chart1) chart1.destroy();
+  let pares = data.categorias.map((c,i)=>({cat:c,gasto:data.gastos[i],meta:data.metas[i]}));
+  pares.sort((a,b)=>b.gasto-a.gasto);
+  let labels = pares.map(p=>p.cat);
+  let gastos = pares.map(p=>p.gasto);
+  let metas = pares.map(p=>p.meta);
+  chart1 = new Chart(ctx1,{
+    type:"bar",
+    data:{
+      labels:labels,
+      datasets:[
+        {label:"Gasto",data:gastos, backgroundColor:"rgba(255,99,132,0.7)"},
+        {label:"Meta",data:metas,type:"line", borderColor:"rgba(54,162,235,0.7)", fill:false}
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false
+    },
+    plugins:[{
+      beforeInit: chart => chart.canvas.classList.add('chart-pareto')
+    }]
+  });
 }
 
-function desenharItens(filtro="todas") {
-    const categorias = ['necessidades','lazer','causas_sociais','reserva','investimento'];
-    const datasets = categorias.map(cat => ({
-        label: cat.replace('_',' '),
-        data: [],
-        backgroundColor: itensOrig.cores[itensOrig.categorias.findIndex(c => c === cat)] || "#4e73df"
-    }));
+btnBar.onclick = criarBar;
+btnPie.onclick = criarPie;
+btnPareto.onclick = criarPareto;
 
-    itensOrig.labels.forEach((label,i)=>{
-        const cat = itensOrig.categorias[i].toLowerCase();
-        const valor = itensOrig.valores[i];
-        if(valor <= 0) return;
-        if(filtro==="todas" || cat===filtro.toLowerCase()){
-            datasets.forEach(ds => {
-                if(ds.label.toLowerCase().replace(' ','_')===cat) ds.data.push(valor);
-                else ds.data.push(0);
-            });
-        }
-    });
-
-    const labels = itensOrig.labels.filter((_,i)=>{
-        const cat = itensOrig.categorias[i].toLowerCase();
-        return filtro==="todas" || cat===filtro.toLowerCase();
-    });
-
-    if(itensChart) itensChart.destroy();
-    itensChart = new Chart(ctxItens, {
-        type: "bar",
-        data: { labels, datasets },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            plugins: { legend:{ position:'bottom' }, tooltip:{ callbacks:{ label: ctx => `${ctx.dataset.label}: R$ ${ctx.raw.toFixed(2)}` } } },
-            scales: { x:{ stacked:true, beginAtZero:true }, y:{ stacked:true } }
-        }
-    });
-
-    atualizarTabela(filtro);
-}
-
-// Botão "Gráfico por Itens"
-document.getElementById("btnItens").onclick = () => {
-    document.getElementById("itensChartContainer").classList.remove("hidden");
-    desenharItens(document.getElementById("filtroCategoria").value);
-};
-
-// Filtro de categoria
-document.getElementById("filtroCategoria").addEventListener("change", function(){
-    desenharItens(this.value);
-});
-{% endif %}
+// Inicializa barra grande
+criarBar();
 {% endif %}
 </script>
-
-</body>
-</html>
+{% endblock %}

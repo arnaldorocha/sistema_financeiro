@@ -1,105 +1,149 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <title>Editar Transação</title>
+{% extends 'base.html' %}
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+{% block title %}Editar Transação{% endblock %}
 
-  <style>
-    .hidden { display: none !important; }
-  </style>
-</head>
+{% block head %}
+<style>
 
-<body class="bg-light">
+/* Card principal */
+.card{
+  border:none;
+  border-radius:18px;
+  background:#0b1220;
+  box-shadow:0 10px 35px rgba(0,0,0,0.4);
+}
+
+.card-header{
+  background:transparent;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+
+.card-header h3{
+  font-weight:600;
+}
+
+/* Inputs */
+.form-control,
+.form-select{
+  background:#020617;
+  border:1px solid rgba(255,255,255,0.08);
+  color:#e5e7eb;
+  border-radius:12px;
+}
+
+.form-control:focus,
+.form-select:focus{
+  border-color:#6366f1;
+  box-shadow:0 0 0 0.15rem rgba(99,102,241,0.25);
+  background:#020617;
+  color:white;
+}
+
+label{
+  font-weight:500;
+}
+
+/* Botão */
+.btn-primary{
+  background:linear-gradient(135deg,#6366f1,#4f46e5);
+  border:none;
+  border-radius:12px;
+  padding:12px;
+  font-weight:600;
+  transition:0.25s;
+}
+
+.btn-primary:hover{
+  transform:translateY(-2px);
+}
+
+/* Animação */
+.card{
+  animation:fadeUp .5s ease;
+}
+
+@keyframes fadeUp{
+  from{
+    opacity:0;
+    transform:translateY(10px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
+
+/* Campo oculto */
+.hidden{
+  display:none !important;
+}
+
+</style>
+{% endblock %}
 
 
+{% block content %}
 
-  <!-- NAVBAR -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
-    <div class="container">
-      <a class="navbar-brand d-flex align-items-center" href="/dashboard">
-        <i class="fa-solid fa-piggy-bank me-2"></i> Controle Financeiro
-      </a>
+<div class="container mt-4 mb-5">
 
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ms-auto align-items-lg-center">
-
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('calendario') }}">
-              <i class="fa-solid fa-chart-pie"></i> Calendário
-            </a>
-          </li>
-
-          <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('contas') }}">
-              <i class="fa-solid fa-file-invoice-dollar"></i> Contas
-            </a>
-          </li>
-
-          <li class="nav-item mt-2 mt-lg-0">
-            <a href="/transacoes" class="btn btn-light text-primary fw-bold w-100">
-              <i class="fa-solid fa-list"></i> Transações
-            </a>
-          </li>
-
-        </ul>
-      </div>
+  <div class="card">
+    <div class="card-header p-4">
+      <h3 class="mb-0">
+        <i class="fa-solid fa-pen-to-square me-2"></i>
+        Editar Transação
+      </h3>
     </div>
-  </nav>
 
-
-<div class="container mt-5">
-
-  <div class="card shadow">
-    <div class="card-header bg-primary text-white">
-      <h3 class="mb-0"><i class="fa-solid fa-pen-to-square"></i> Editar Transação</h3>
-    </div>
-
-    <div class="card-body">
+    <div class="card-body p-4">
 
       <form action="{{ url_for('editar_transacao', id=transacao['id']) }}" method="post">
 
         <!-- Tipo -->
-        <div class="mb-3">
+        <div class="mb-4">
           <label class="form-label">Tipo de Transação</label>
           <select class="form-select" id="tipo" name="tipo" required>
-            <option value="gasto" {% if transacao['tipo'] == 'gasto' %}selected{% endif %}>Gasto</option>
-            <option value="renda" {% if transacao['tipo'] == 'renda' %}selected{% endif %}>Renda</option>
+            <option value="gasto" {% if transacao['tipo'] == 'gasto' %}selected{% endif %}>
+              💸 Gasto
+            </option>
+            <option value="renda" {% if transacao['tipo'] == 'renda' %}selected{% endif %}>
+              💰 Renda
+            </option>
           </select>
         </div>
 
         <!-- Nome -->
-        <div class="mb-3">
-          <label class="form-label">Nome</label>
+        <div class="mb-4">
+          <label class="form-label">Nome da Transação</label>
           <input type="text" class="form-control" name="nome" value="{{ transacao['nome'] }}" required>
         </div>
 
         <!-- Valor -->
-        <div class="mb-3">
+        <div class="mb-4">
           <label class="form-label">Valor</label>
           <input type="number" step="0.01" class="form-control" name="valor" value="{{ transacao['valor'] }}" required>
         </div>
 
         <!-- Categoria -->
-        <div class="mb-3">
+        <div class="mb-4">
           <label class="form-label">Categoria</label>
           <select class="form-select" id="categoria" name="categoria" required>
+            <option value="auto" {% if transacao['categoria'] not in ['necessidades','lazer','investimento','reserva','causas_sociais','renda'] %}selected{% endif %}>
+              Automático
+            </option>
             <option value="necessidades" {% if transacao['categoria']=='necessidades' %}selected{% endif %}>Necessidades</option>
             <option value="lazer" {% if transacao['categoria']=='lazer' %}selected{% endif %}>Lazer</option>
             <option value="investimento" {% if transacao['categoria']=='investimento' %}selected{% endif %}>Investimento</option>
             <option value="reserva" {% if transacao['categoria']=='reserva' %}selected{% endif %}>Reserva</option>
             <option value="causas_sociais" {% if transacao['categoria']=='causas_sociais' %}selected{% endif %}>Causa Social</option>
-
+            <option value="renda" {% if transacao['categoria']=='renda' %}selected{% endif %}>Renda</option>
           </select>
+          <div class="form-text text-secondary">
+            Selecione automático para classificar baseado nas suas categorias personalizadas.
+          </div>
         </div>
 
-        <!-- Período (somente gasto) -->
-        <div id="periodo-grupo" class="mb-3">
+        <!-- Período -->
+        <div id="periodo-grupo" class="mb-4">
           <label class="form-label">Período</label>
           <select class="form-select" id="periodo" name="periodo">
             <option value="" disabled>Selecione...</option>
@@ -111,13 +155,13 @@
         </div>
 
         <!-- Data -->
-        <div class="mb-3">
+        <div class="mb-4">
           <label class="form-label">Data</label>
           <input type="date" class="form-control" name="data" value="{{ transacao['data'] }}" required>
         </div>
 
         <button class="btn btn-primary w-100">
-          <i class="fa-solid fa-save"></i> Atualizar
+          <i class="fa-solid fa-save me-1"></i> Atualizar Transação
         </button>
 
       </form>
@@ -127,28 +171,26 @@
 
 </div>
 
+{% endblock %}
+
+
+{% block scripts %}
 <script>
-  const tipo = document.getElementById("tipo");
-  const periodoGrupo = document.getElementById("periodo-grupo");
-  const campoPeriodo = document.getElementById("periodo");
+const tipo = document.getElementById("tipo");
+const periodoGrupo = document.getElementById("periodo-grupo");
+const campoPeriodo = document.getElementById("periodo");
 
-  function atualizarVisibilidade() {
-    if (tipo.value === "renda") {
-      periodoGrupo.classList.add("hidden");
-      campoPeriodo.required = false;
-    } else {
-      periodoGrupo.classList.remove("hidden");
-      campoPeriodo.required = true;
-    }
+function atualizarVisibilidade(){
+  if(tipo.value === "renda"){
+    periodoGrupo.classList.add("hidden");
+    campoPeriodo.required = false;
+  }else{
+    periodoGrupo.classList.remove("hidden");
+    campoPeriodo.required = true;
   }
+}
 
-  tipo.addEventListener("change", atualizarVisibilidade);
-
-  // Executar ao carregar a página
-  atualizarVisibilidade();
+tipo.addEventListener("change", atualizarVisibilidade);
+atualizarVisibilidade();
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-</body>
-</html>
+{% endblock %}

@@ -1,119 +1,146 @@
-<!DOCTYPE html> 
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadastro de Usuário</title>
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
-  <!-- Custom CSS (opcional) -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% extends "base.html" %}
 
-  <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background-color: #f4f4f9;
-    }
-    .form-container {
-      max-width: 400px;
-      margin: auto;
-      padding: 30px;
-      background-color: #fff;
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    .form-container h2 {
-      text-align: center;
-      margin-bottom: 30px;
-      color: #333;
-    }
-    .form-container .form-label {
-      font-weight: bold;
-    }
-    .btn-custom {
-      background-color: #1A73E8;
-      color: white;
-      width: 100%;
-      padding: 10px;
-      border-radius: 5px;
-      border: none;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    
+{% block title %}Cadastro{% endblock %}
 
-    .btn-custom:hover {
-      background-color: #0C58D6;
-      color: white;
-    }
+{% block head %}
 
-    .link-text {
-      text-align: center;
-      margin-top: 15px;
-    }
-    .flash-message {
-      margin-top: 20px;
-    }
-  </style>
-</head>
-<body>
-  <!-- Tela de Cadastro -->
-  <div class="container my-5">
-    <div class="form-container">
-      <h2>Cadastro de Usuário</h2>
-      <form method="post" action="{{ url_for('cadastro') }}" class="forms_login">
-        <div class="mb-3">
-          <label for="username" class="form-label">Usuário</label>
-          <input type="text" class="form-control" name="username" id="username" placeholder="Insira seu usuário" required>
-        </div>
-        <div class="mb-3">
-          <label for="password" class="form-label">Senha</label>
-          <input type="password" class="form-control" name="password" id="password" placeholder="Insira sua senha" required>
-        </div>
-        <div class="mb-3">
-          <label for="confirmPassword" class="form-label">Confirmar Senha</label>
-          <input type="password" class="form-control" name="confirmPassword" id="confirmPassword" placeholder="Confirme sua senha" required>
-        </div>
-        
+<style>
 
-        <button type="submit" class="btn btn-custom">Criar Acesso</button>
-      </form>
-      <div class="link-text">
-        <a href="{{ url_for('index') }}">Voltar à Tela de Login</a>
-      </div>
-    </div>
-  </div>
+body{
+    background:#0b0f1a;
+}
 
-  <!-- Flash Messages -->
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <div class="flash-messages-container">
-        {% for message, category in messages %}
-          <div class="flash-message {{ category }}">
-            {{ message }}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-  {% endwith %}
+.auth-container{
+    display:flex;
+    min-height:100vh;
+}
+
+.auth-left{
+    width:50%;
+    background:#05070d;
+    color:white;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:60px;
+}
+
+.auth-left h1{
+    font-size:42px;
+    margin-bottom:25px;
+}
+
+.auth-left input{
+
+    background:#0f1424;
+    border:1px solid #2a2f45;
+    border-radius:12px;
+    padding:14px;
+    color:white;
+    margin-bottom:15px;
+
+}
+
+.auth-btn{
+
+    margin-top:15px;
+
+    border:none;
+    border-radius:12px;
+    padding:14px;
+
+    background:linear-gradient(
+        90deg,
+        #7c3aed,
+        #ec4899,
+        #f59e0b
+    );
+
+    color:white;
+}
+
+.auth-right{
+
+    width:50%;
+
+    background:url("{{ url_for('static', filename='img/bg.jpg') }}");
+
+    background-size:cover;
+    background-position:center;
+    position:relative;
+
+}
+
+.auth-right::before{
+
+    content:"";
+    position:absolute;
+    inset:0;
+
+    background:
+
+    linear-gradient(
+        to right,
+        rgba(5,7,13,0.9),
+        rgba(5,7,13,0.3)
+    ),
+
+    linear-gradient(
+        to bottom,
+        rgba(5,7,13,0.7),
+        rgba(5,7,13,0.2)
+    );
+
+}
+
+@media(max-width:900px){
+
+.auth-right{
+    display:none;
+}
+
+.auth-left{
+    width:100%;
+}
+
+}
+
+</style>
+
+{% endblock %}
 
 
-  <!-- Script para fechar mensagens flash -->
-  <script>
-    setTimeout(function() {
-      var flashMessages = document.getElementsByClassName('flash-message');
-      for (var i = 0; i < flashMessages.length; i++) {
-        flashMessages[i].style.display = 'none';
-      }
-    }, 6000);
-  </script>
-</body>
-</html>
+{% block content %}
+
+<div class="auth-container">
+
+<div class="auth-left">
+
+<h1>Criar conta</h1>
+
+<form method="POST" action="{{ url_for('cadastro') }}">
+
+<input name="username"
+       placeholder="Usuário"
+       class="form-control"
+       required>
+
+<input name="password"
+       type="password"
+       placeholder="Senha"
+       class="form-control"
+       required>
+
+<button class="auth-btn w-100">
+Criar acesso
+</button>
+
+</form>
+
+</div>
+
+<div class="auth-right"></div>
+
+</div>
+
+{% endblock %}
